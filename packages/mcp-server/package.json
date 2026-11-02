@@ -1,0 +1,14 @@
+{
+  "name": "@eigyo/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "eigyo-aibou-mcp": "./src/index.ts"
+  },
+  "dependencies": {
+    "@eigyo/core": "*",
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "zod": "^4.1.0"
+  }
+}
