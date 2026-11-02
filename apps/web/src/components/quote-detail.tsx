@@ -22,7 +22,7 @@ const FLOW: Record<QuoteStatus, { next: QuoteStatus; label: string }[]> = {
   lost: [{ next: "tracking", label: "追跡中に戻す" }],
 };
 
-export function QuoteDetail({ quote, activities, lines, aiEnabled }: { quote: QuoteWithItems; activities: Activity[]; lines: LineCheck[]; aiEnabled: boolean }) {
+export function QuoteDetail({ quote, activities, lines, aiEnabled, deal, dealOptions }: { quote: QuoteWithItems; activities: Activity[]; lines: LineCheck[]; aiEnabled: boolean; deal?: { id: number; title: string; status: string } | null; dealOptions?: { id: number; title: string }[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [items, setItems] = useState<DraftItem[]>(lines.map((l) => l.draft));
@@ -74,6 +74,15 @@ export function QuoteDetail({ quote, activities, lines, aiEnabled }: { quote: Qu
         <div>
           <div className="flex items-center gap-3"><h1 className="text-xl lg:text-2xl font-bold num">{quote.quote_no}</h1><StatusBadge status={quote.status} />{overall !== "ok" && <LevelBadge level={overall}>{{ info: "参考情報あり", warn: "要確認あり", danger: "赤字あり", ok: "" }[overall]}</LevelBadge>}</div>
           <div className="text-sm mt-1"><Link href={`/customers/${quote.customer.id}`} className="font-medium hover:underline">{quote.customer.name}</Link><span className="text-muted">　{quote.customer.contact_name ?? ""}　／　{quote.subject}</span></div>
+          <div className="text-xs mt-1 flex flex-wrap items-center gap-2">
+            <span className="text-muted">案件:</span>
+            {deal ? <Link href={`/deals/${deal.id}`} className="rounded bg-brand/10 text-brand px-2 py-0.5 font-semibold hover:underline">◆ {deal.title}</Link> : <span className="text-muted">未紐づけ</span>}
+            {dealOptions && dealOptions.length > 0 && (
+              <select className="text-xs rounded border border-line px-1.5 py-0.5" defaultValue="" onChange={async (e) => { if (!e.target.value) return; await fetch(`/api/quotes/${quote.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deal_id: Number(e.target.value) }) }); router.refresh(); }}>
+                <option value="">別の案件へ…</option>{dealOptions.filter((o) => o.id !== deal?.id).map((o) => <option key={o.id} value={o.id}>{o.title}</option>)}
+              </select>
+            )}
+          </div>
           <div className="text-xs text-muted mt-1">作成 {dateJp(quote.created_at)} ／ 提出 {dateJp(quote.submitted_at)} ／ 有効期限 {dateJp(quote.valid_until)} ／ 希望納期 <b className="text-ink">{dateJp(quote.requested_delivery)}</b> ／ 回答納期 <b className="text-ink">{dateJp(quote.promised_delivery)}</b></div>
         </div>
         <div className="no-print flex flex-wrap gap-2">

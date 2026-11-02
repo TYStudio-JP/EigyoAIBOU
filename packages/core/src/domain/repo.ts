@@ -1,6 +1,7 @@
 import type { Db } from "../db/connection";
 import {
   DEFAULT_SETTINGS,
+  type Contact, type ContactStatus, type CustomerKind, type CustomerOwnerRecord, type Deal, type DealEvent, type DealStatus, type DealWithRefs, type EndCustomer, type User,
   type Activity,
   type Customer,
   type LostReason,
@@ -88,14 +89,14 @@ export function findCustomerByTel(db: Db, tel: string): Customer | null {
   if (!n) return null;
   return listCustomers(db).find((c) => c.tel && normalizeTel(c.tel) === n) ?? null;
 }
-export function upsertCustomer(db: Db, c: Omit<Customer, "id">): Customer {
+export function upsertCustomer(db: Db, c: Omit<Customer, "id" | "kind" | "owner_user_id"> & { kind?: CustomerKind; owner_user_id?: number | null }): Customer {
   db.prepare(
-    `INSERT INTO customers(code,name,short_name,industry,prefecture,contact_name,contact_email,tel,payment_terms,notes)
-     VALUES(?,?,?,?,?,?,?,?,?,?)
+    `INSERT INTO customers(code,name,short_name,industry,prefecture,contact_name,contact_email,tel,kind,owner_user_id,payment_terms,notes)
+     VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
      ON CONFLICT(code) DO UPDATE SET name=excluded.name, short_name=excluded.short_name, industry=excluded.industry,
        prefecture=excluded.prefecture, contact_name=excluded.contact_name, contact_email=excluded.contact_email,
-       tel=excluded.tel, payment_terms=excluded.payment_terms, notes=excluded.notes`,
-  ).run(c.code, c.name, c.short_name, c.industry, c.prefecture, c.contact_name, c.contact_email, c.tel ?? null, c.payment_terms, c.notes);
+       tel=excluded.tel, kind=excluded.kind, owner_user_id=COALESCE(excluded.owner_user_id, customers.owner_user_id), payment_terms=excluded.payment_terms, notes=excluded.notes`,
+  ).run(c.code, c.name, c.short_name, c.industry, c.prefecture, c.contact_name, c.contact_email, c.tel ?? null, c.kind ?? "end_user", c.owner_user_id ?? null, c.payment_terms, c.notes);
   return one<Customer>(db, "SELECT * FROM customers WHERE code=?", c.code)!;
 }
 
@@ -237,6 +238,8 @@ export interface NewQuoteItem {
 }
 export interface NewQuote {
   customer_id: number;
+  contact_id?: number | null;
+  deal_id?: number | null;
   subject: string;
   status?: QuoteStatus;
   requested_delivery?: string | null;
@@ -270,11 +273,11 @@ export function createQuote(db: Db, q: NewQuote): QuoteWithItems {
     promised_delivery = leads.length ? addDays(created, Math.max(...leads) + 1) : null;
   }
   const res = db.prepare(
-    `INSERT INTO quotes(quote_no,customer_id,subject,status,requested_delivery,promised_delivery,valid_until,source_type,source_text,notes,
+    `INSERT INTO quotes(quote_no,customer_id,contact_id,deal_id,subject,status,requested_delivery,promised_delivery,valid_until,source_type,source_text,notes,
        lost_reason,lost_detail,submitted_at,closed_at,created_at,updated_at)
-     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   ).run(
-    quoteNo, q.customer_id, q.subject, q.status ?? "draft", q.requested_delivery ?? null, promised_delivery ?? null,
+    quoteNo, q.customer_id, q.contact_id ?? null, q.deal_id ?? null, q.subject, q.status ?? "draft", q.requested_delivery ?? null, promised_delivery ?? null,
     valid_until ?? null, q.source_type ?? "manual", q.source_text ?? "", q.notes ?? "",
     q.lost_reason ?? null, q.lost_detail ?? null, q.submitted_at ?? null, q.closed_at ?? null, created, created,
   );
@@ -296,7 +299,7 @@ export function replaceItems(db: Db, quoteId: number, items: NewQuoteItem[]): vo
   touch(db, quoteId);
 }
 
-export function updateQuoteHeader(db: Db, quoteId: number, patch: Partial<Pick<Quote, "subject" | "requested_delivery" | "promised_delivery" | "valid_until" | "notes" | "customer_id">>): void {
+export function updateQuoteHeader(db: Db, quoteId: number, patch: Partial<Pick<Quote, "subject" | "requested_delivery" | "promised_delivery" | "valid_until" | "notes" | "customer_id" | "contact_id" | "deal_id">>): void {
   const keys = Object.keys(patch) as (keyof typeof patch)[];
   if (!keys.length) return;
   const set = keys.map((k) => `${k}=?`).join(", ");
@@ -364,11 +367,13 @@ export interface QuoteSummary extends Quote {
   item_count: number;
   last_followup_at: string | null;
 }
-export function listQuotes(db: Db, opts: { status?: QuoteStatus[]; customerId?: number; q?: string; limit?: number } = {}): QuoteSummary[] {
+export function listQuotes(db: Db, opts: { status?: QuoteStatus[]; customerId?: number; contactId?: number; dealId?: number; q?: string; limit?: number } = {}): QuoteSummary[] {
   const params: (string | number)[] = [];
   const where: string[] = [];
   if (opts.status?.length) { where.push(`q.status IN (${opts.status.map(() => "?").join(",")})`); params.push(...opts.status); }
   if (opts.customerId) { where.push("q.customer_id = ?"); params.push(opts.customerId); }
+  if (opts.contactId) { where.push("q.contact_id = ?"); params.push(opts.contactId); }
+  if (opts.dealId) { where.push("q.deal_id = ?"); params.push(opts.dealId); }
   if (opts.q) { where.push("(q.quote_no LIKE ? OR q.subject LIKE ? OR c.name LIKE ? OR c.short_name LIKE ?)"); params.push(...Array(4).fill(`%${opts.q}%`)); }
   params.push(opts.limit ?? 200);
   return all<QuoteSummary>(
@@ -428,28 +433,30 @@ import type { CallDirection, CallMinutes, CallRecord, CallStatus, CallWithCustom
 function hydrateCall(db: Db, c: CallRecord): CallWithCustomer {
   let minutes: CallMinutes | null = null;
   if (c.minutes_json) { try { minutes = JSON.parse(c.minutes_json) as CallMinutes; } catch { minutes = null; } }
-  return { ...c, customer: c.customer_id ? getCustomer(db, c.customer_id) : null, minutes };
+  return { ...c, customer: c.customer_id ? getCustomer(db, c.customer_id) : null, contact: c.contact_id ? getContact(db, c.contact_id) : null, minutes };
 }
-export function createCall(db: Db, c: { customer_id?: number | null; tel?: string | null; direction?: CallDirection; started_at?: string; duration_sec?: number | null; source?: string; memo?: string }): CallWithCustomer {
+export function createCall(db: Db, c: { customer_id?: number | null; contact_id?: number | null; deal_id?: number | null; tel?: string | null; direction?: CallDirection; started_at?: string; duration_sec?: number | null; source?: string; memo?: string }): CallWithCustomer {
   const now = nowStamp();
   const res = db.prepare(
-    "INSERT INTO calls(customer_id,tel,direction,started_at,duration_sec,source,memo,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
-  ).run(c.customer_id ?? null, c.tel ?? null, c.direction ?? "unknown", c.started_at ?? now, c.duration_sec ?? null, c.source ?? "manual", c.memo ?? "", "open", now, now);
+    "INSERT INTO calls(customer_id,contact_id,deal_id,tel,direction,started_at,duration_sec,source,memo,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+  ).run(c.customer_id ?? null, c.contact_id ?? null, c.deal_id ?? null, c.tel ?? null, c.direction ?? "unknown", c.started_at ?? now, c.duration_sec ?? null, c.source ?? "manual", c.memo ?? "", "open", now, now);
   return getCall(db, Number(res.lastInsertRowid))!;
 }
 export function getCall(db: Db, id: number): CallWithCustomer | null {
   const c = one<CallRecord>(db, "SELECT * FROM calls WHERE id=?", id);
   return c ? hydrateCall(db, c) : null;
 }
-export function listCalls(db: Db, opts: { status?: CallStatus[]; customerId?: number; limit?: number } = {}): CallWithCustomer[] {
+export function listCalls(db: Db, opts: { status?: CallStatus[]; customerId?: number; contactId?: number; dealId?: number; limit?: number } = {}): CallWithCustomer[] {
   const params: (string | number)[] = [];
   const where: string[] = [];
   if (opts.status?.length) { where.push(`status IN (${opts.status.map(() => "?").join(",")})`); params.push(...opts.status); }
   if (opts.customerId) { where.push("customer_id=?"); params.push(opts.customerId); }
+  if (opts.contactId) { where.push("contact_id=?"); params.push(opts.contactId); }
+  if (opts.dealId) { where.push("deal_id=?"); params.push(opts.dealId); }
   params.push(opts.limit ?? 50);
   return all<CallRecord>(db, `SELECT * FROM calls ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY started_at DESC, id DESC LIMIT ?`, ...params).map((c) => hydrateCall(db, c));
 }
-export function updateCall(db: Db, id: number, patch: Partial<Pick<CallRecord, "customer_id" | "tel" | "direction" | "memo" | "minutes_json" | "mail_subject" | "mail_body" | "status" | "duration_sec" | "started_at">>): CallWithCustomer {
+export function updateCall(db: Db, id: number, patch: Partial<Pick<CallRecord, "customer_id" | "contact_id" | "deal_id" | "tel" | "direction" | "memo" | "minutes_json" | "mail_subject" | "mail_body" | "status" | "duration_sec" | "started_at">>): CallWithCustomer {
   const keys = Object.keys(patch) as (keyof typeof patch)[];
   if (keys.length) {
     const set = keys.map((k) => `${k}=?`).join(", ");
@@ -459,6 +466,189 @@ export function updateCall(db: Db, id: number, patch: Partial<Pick<CallRecord, "
 }
 export function deleteCall(db: Db, id: number): void {
   db.prepare("DELETE FROM calls WHERE id=?").run(id);
+}
+
+// ---------- contacts（得意先の担当者） ----------
+export function listContacts(db: Db, customerId?: number, opts: { includeInactive?: boolean } = {}): Contact[] {
+  const where: string[] = [];
+  const params: (number | string)[] = [];
+  if (customerId) { where.push("customer_id=?"); params.push(customerId); }
+  if (!opts.includeInactive) where.push("status='active'");
+  return all<Contact>(db, `SELECT * FROM contacts ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'transferred' THEN 1 ELSE 2 END, id`, ...params);
+}
+export function getContact(db: Db, id: number): Contact | null {
+  return one<Contact>(db, "SELECT * FROM contacts WHERE id=?", id);
+}
+/** 「佐藤さん」「佐藤 健一」など、名前の一部で得意先内の担当者を探す（在籍者優先）。 */
+export function findContactByName(db: Db, customerId: number, name: string): Contact | null {
+  const key = name.replace(/(さん|様|氏|部長|課長|主任|係長|社長|専務|常務|工場長)$/g, "").replace(/\s+/g, "").trim();
+  if (!key) return null;
+  const list = listContacts(db, customerId, { includeInactive: true });
+  const norm = (s: string) => s.replace(/\s+/g, "");
+  return list.find((c) => norm(c.name) === key) ?? list.find((c) => norm(c.name).includes(key) || key.includes(norm(c.name).slice(0, 2))) ?? null;
+}
+export function createContact(db: Db, c: { customer_id: number; name: string; department?: string; title?: string; tel?: string | null; mobile?: string | null; email?: string | null; status?: ContactStatus; notes?: string; source?: string }): Contact {
+  const now = nowStamp();
+  const res = db.prepare(
+    "INSERT INTO contacts(customer_id,name,department,title,tel,mobile,email,status,notes,source,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+  ).run(c.customer_id, c.name, c.department ?? "", c.title ?? "", c.tel ?? null, c.mobile ?? null, c.email ?? null, c.status ?? "active", c.notes ?? "", c.source ?? "manual", now, now);
+  return getContact(db, Number(res.lastInsertRowid))!;
+}
+export function updateContact(db: Db, id: number, patch: Partial<Omit<Contact, "id" | "customer_id" | "created_at" | "updated_at">>): Contact {
+  const keys = Object.keys(patch) as (keyof typeof patch)[];
+  if (keys.length) {
+    const set = keys.map((k) => `${k}=?`).join(", ");
+    db.prepare(`UPDATE contacts SET ${set}, updated_at=? WHERE id=?`).run(...keys.map((k) => patch[k] as string | number | null), nowStamp(), id);
+  }
+  return getContact(db, id)!;
+}
+export function findContactByTel(db: Db, tel: string): Contact | null {
+  const n = normalizeTel(tel);
+  if (!n) return null;
+  return all<Contact>(db, "SELECT * FROM contacts WHERE tel IS NOT NULL OR mobile IS NOT NULL").find((c) => (c.tel && normalizeTel(c.tel) === n) || (c.mobile && normalizeTel(c.mobile) === n)) ?? null;
+}
+
+// ---------- end customers（得意先の得意先 / 納入先） ----------
+export function listEndCustomers(db: Db, customerId: number): EndCustomer[] {
+  return all<EndCustomer>(db, "SELECT * FROM end_customers WHERE customer_id=? ORDER BY name", customerId);
+}
+export function getEndCustomer(db: Db, id: number): EndCustomer | null {
+  return one<EndCustomer>(db, "SELECT * FROM end_customers WHERE id=?", id);
+}
+export function createEndCustomer(db: Db, e: { customer_id: number; name: string; industry?: string; notes?: string }): EndCustomer {
+  const existing = one<EndCustomer>(db, "SELECT * FROM end_customers WHERE customer_id=? AND name=?", e.customer_id, e.name);
+  if (existing) return existing;
+  const res = db.prepare("INSERT INTO end_customers(customer_id,name,industry,notes) VALUES(?,?,?,?)").run(e.customer_id, e.name, e.industry ?? "", e.notes ?? "");
+  return getEndCustomer(db, Number(res.lastInsertRowid))!;
+}
+
+// ---------- deals（案件） ----------
+function hydrateDeal(db: Db, d: Deal): DealWithRefs {
+  const agg = one<{ amount_open: number; amount_won: number; quote_count: number }>(
+    db,
+    `SELECT COALESCE(SUM(CASE WHEN status IN ('submitted','tracking','draft') THEN (SELECT SUM(qty*unit_price) FROM quote_items WHERE quote_id=q.id) END),0) AS amount_open,
+            COALESCE(SUM(CASE WHEN status='won' THEN (SELECT SUM(qty*unit_price) FROM quote_items WHERE quote_id=q.id) END),0) AS amount_won,
+            COUNT(*) AS quote_count
+     FROM quotes q WHERE q.deal_id=?`, d.id,
+  )!;
+  const calls = one<{ n: number }>(db, "SELECT COUNT(*) AS n FROM calls WHERE deal_id=?", d.id)!;
+  return {
+    ...d,
+    customer: getCustomer(db, d.customer_id)!,
+    contact: d.contact_id ? getContact(db, d.contact_id) : null,
+    end_customer: d.end_customer_id ? getEndCustomer(db, d.end_customer_id) : null,
+    amount: d.status === "won" ? agg.amount_won : agg.amount_open || agg.amount_won,
+    quote_count: agg.quote_count,
+    call_count: calls.n,
+  };
+}
+export function createDeal(db: Db, d: { customer_id: number; contact_id?: number | null; end_customer_id?: number | null; title: string; status?: DealStatus; opened_at?: string; summary?: string }): DealWithRefs {
+  const at = d.opened_at ?? nowStamp();
+  const res = db.prepare(
+    "INSERT INTO deals(customer_id,contact_id,end_customer_id,title,status,summary,opened_at,last_activity_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
+  ).run(d.customer_id, d.contact_id ?? null, d.end_customer_id ?? null, d.title, d.status ?? "inquiry", d.summary ?? "", at, at, at, at);
+  const id = Number(res.lastInsertRowid);
+  addDealEvent(db, id, "created", `案件「${d.title}」を作成`, undefined, at);
+  return getDeal(db, id)!;
+}
+export function getDeal(db: Db, id: number): DealWithRefs | null {
+  const d = one<Deal>(db, "SELECT * FROM deals WHERE id=?", id);
+  return d ? hydrateDeal(db, d) : null;
+}
+export function listDeals(db: Db, opts: { customerId?: number; contactId?: number; endCustomerId?: number; status?: DealStatus[]; openOnly?: boolean; limit?: number } = {}): DealWithRefs[] {
+  const where: string[] = [];
+  const params: (number | string)[] = [];
+  if (opts.customerId) { where.push("customer_id=?"); params.push(opts.customerId); }
+  if (opts.contactId) { where.push("contact_id=?"); params.push(opts.contactId); }
+  if (opts.endCustomerId) { where.push("end_customer_id=?"); params.push(opts.endCustomerId); }
+  if (opts.status?.length) { where.push(`status IN (${opts.status.map(() => "?").join(",")})`); params.push(...opts.status); }
+  if (opts.openOnly) where.push("status NOT IN ('won','lost')");
+  params.push(opts.limit ?? 200);
+  return all<Deal>(db, `SELECT * FROM deals ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY last_activity_at DESC, id DESC LIMIT ?`, ...params).map((d) => hydrateDeal(db, d));
+}
+export function updateDeal(db: Db, id: number, patch: Partial<Pick<Deal, "title" | "status" | "contact_id" | "end_customer_id" | "summary" | "summary_detail" | "next_action" | "next_action_due" | "last_activity_at" | "closed_at">>): DealWithRefs {
+  const keys = Object.keys(patch) as (keyof typeof patch)[];
+  if (keys.length) {
+    const set = keys.map((k) => `${k}=?`).join(", ");
+    db.prepare(`UPDATE deals SET ${set}, updated_at=? WHERE id=?`).run(...keys.map((k) => patch[k] as string | number | null), nowStamp(), id);
+  }
+  return getDeal(db, id)!;
+}
+export function touchDeal(db: Db, id: number, at: string = nowStamp()): void {
+  db.prepare("UPDATE deals SET last_activity_at=MAX(last_activity_at, ?), updated_at=? WHERE id=?").run(at, nowStamp(), id);
+}
+export function addDealEvent(db: Db, dealId: number, kind: string, body: string, ref?: { type: string; id: number }, at: string = nowStamp()): DealEvent {
+  const res = db.prepare("INSERT INTO deal_events(deal_id,kind,body,ref_type,ref_id,created_at) VALUES(?,?,?,?,?,?)").run(dealId, kind, body, ref?.type ?? null, ref?.id ?? null, at);
+  touchDeal(db, dealId, at);
+  return one<DealEvent>(db, "SELECT * FROM deal_events WHERE id=?", Number(res.lastInsertRowid))!;
+}
+export function listDealEvents(db: Db, dealId: number): DealEvent[] {
+  return all<DealEvent>(db, "SELECT * FROM deal_events WHERE deal_id=? ORDER BY created_at DESC, id DESC", dealId);
+}
+/** 見積りを案件に紐づける（付け替え可）。 */
+export function setQuoteDeal(db: Db, quoteId: number, dealId: number | null, contactId?: number | null): void {
+  const q = one<{ deal_id: number | null; quote_no: string; created_at: string; contact_id: number | null }>(db, "SELECT deal_id, quote_no, created_at, contact_id FROM quotes WHERE id=?", quoteId);
+  if (!q) return;
+  db.prepare("UPDATE quotes SET deal_id=?, contact_id=COALESCE(?, contact_id), updated_at=? WHERE id=?").run(dealId, contactId ?? null, nowStamp(), quoteId);
+  if (q.deal_id && q.deal_id !== dealId) addDealEvent(db, q.deal_id, "link", `見積り ${q.quote_no} を別の案件へ移動`, { type: "quote", id: quoteId });
+  if (dealId && q.deal_id !== dealId) addDealEvent(db, dealId, "quote", `見積り ${q.quote_no} を紐づけ`, { type: "quote", id: quoteId }, q.created_at);
+}
+export function setCallDeal(db: Db, callId: number, dealId: number | null, contactId?: number | null): void {
+  const c = one<{ deal_id: number | null; started_at: string }>(db, "SELECT deal_id, started_at FROM calls WHERE id=?", callId);
+  if (!c) return;
+  db.prepare("UPDATE calls SET deal_id=?, contact_id=COALESCE(?, contact_id), updated_at=? WHERE id=?").run(dealId, contactId ?? null, nowStamp(), callId);
+  if (c.deal_id && c.deal_id !== dealId) addDealEvent(db, c.deal_id, "link", `通話 #${callId} を別の案件へ移動`, { type: "call", id: callId });
+  if (dealId && c.deal_id !== dealId) addDealEvent(db, dealId, "call", `通話 #${callId} を紐づけ`, { type: "call", id: callId }, c.started_at);
+}
+
+/** 担当者ごとの対応量（直近 N 日）：電話・見積り・案件の件数。売上とは別の「見えない工数」。 */
+export interface ContactWorkload { contact: Contact; calls: number; quotes: number; deals: number; open_deals: number; last_contact_at: string | null }
+export function contactWorkload(db: Db, customerId: number, days = 90): ContactWorkload[] {
+  const since = addDays(today(), -days);
+  return listContacts(db, customerId, { includeInactive: true }).map((c) => {
+    const calls = one<{ n: number; last: string | null }>(db, "SELECT COUNT(*) AS n, MAX(started_at) AS last FROM calls WHERE contact_id=? AND substr(started_at,1,10)>=?", c.id, since)!;
+    const quotes = one<{ n: number; last: string | null }>(db, "SELECT COUNT(*) AS n, MAX(created_at) AS last FROM quotes WHERE contact_id=? AND substr(created_at,1,10)>=?", c.id, since)!;
+    const deals = one<{ n: number; open: number }>(db, "SELECT COUNT(*) AS n, SUM(CASE WHEN status NOT IN ('won','lost') THEN 1 ELSE 0 END) AS open FROM deals WHERE contact_id=?", c.id)!;
+    const last = [calls.last, quotes.last].filter(Boolean).sort().pop() ?? null;
+    return { contact: c, calls: calls.n, quotes: quotes.n, deals: deals.n, open_deals: deals.open ?? 0, last_contact_at: last };
+  });
+}
+
+// ---------- users（自社の営業担当） ----------
+export function listUsers(db: Db, opts: { includeInactive?: boolean } = {}): User[] {
+  return all<User>(db, `SELECT * FROM users ${opts.includeInactive ? "" : "WHERE status='active'"} ORDER BY id`);
+}
+export function getUser(db: Db, id: number): User | null {
+  return one<User>(db, "SELECT * FROM users WHERE id=?", id);
+}
+export function createUser(db: Db, u: { name: string; department?: string; email?: string | null; status?: "active" | "inactive" }): User {
+  const res = db.prepare("INSERT INTO users(name,department,email,status) VALUES(?,?,?,?)").run(u.name, u.department ?? "", u.email ?? null, u.status ?? "active");
+  return getUser(db, Number(res.lastInsertRowid))!;
+}
+export function updateUser(db: Db, id: number, patch: Partial<Pick<User, "name" | "department" | "email" | "status">>): User {
+  const keys = Object.keys(patch) as (keyof typeof patch)[];
+  if (keys.length) db.prepare(`UPDATE users SET ${keys.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...keys.map((k) => patch[k] as string | null), id);
+  return getUser(db, id)!;
+}
+/** 得意先の担当ユーザーを設定（履歴なしの初期設定用。引継ぎは domain/handover.ts の handoverCustomer を使う）。 */
+export function setCustomerOwner(db: Db, customerId: number, userId: number | null): void {
+  db.prepare("UPDATE customers SET owner_user_id=? WHERE id=?").run(userId, customerId);
+}
+export function listCustomersByOwner(db: Db, userId: number): Customer[] {
+  return all<Customer>(db, "SELECT * FROM customers WHERE owner_user_id=? ORDER BY code", userId);
+}
+export function addOwnerRecord(db: Db, r: { customer_id: number; from_user_id: number | null; to_user_id: number; handed_at?: string; note?: string; handover_doc?: string }): CustomerOwnerRecord {
+  const res = db.prepare("INSERT INTO customer_owners(customer_id,from_user_id,to_user_id,handed_at,note,handover_doc) VALUES(?,?,?,?,?,?)").run(r.customer_id, r.from_user_id, r.to_user_id, r.handed_at ?? nowStamp(), r.note ?? "", r.handover_doc ?? "");
+  return one<CustomerOwnerRecord>(db, "SELECT * FROM customer_owners WHERE id=?", Number(res.lastInsertRowid))!;
+}
+export function ownerHistory(db: Db, customerId: number): CustomerOwnerRecord[] {
+  return all<CustomerOwnerRecord>(db, "SELECT * FROM customer_owners WHERE customer_id=? ORDER BY handed_at DESC, id DESC", customerId);
+}
+/** あるユーザーが「過去に担当していた」得意先（現在は別ユーザー）。 */
+export function pastCustomersOfUser(db: Db, userId: number): { customer: Customer; handed_at: string; to_user: User | null; record_id: number }[] {
+  return all<CustomerOwnerRecord>(db, "SELECT * FROM customer_owners WHERE from_user_id=? ORDER BY handed_at DESC", userId)
+    .map((r) => ({ customer: getCustomer(db, r.customer_id)!, handed_at: r.handed_at, to_user: getUser(db, r.to_user_id), record_id: r.id }))
+    .filter((x) => x.customer && x.customer.owner_user_id !== userId);
 }
 
 export type { Row };

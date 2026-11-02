@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Customer } from "@eigyo/core/shared";
+import type { Contact, Customer } from "@eigyo/core/shared";
 import type { DraftItem, QuoteDraft } from "@/lib/draft";
 import { Button, Card, inputCls, labelCls } from "./ui";
 import { ItemsEditor, emptyItem } from "./items-editor";
@@ -9,7 +9,7 @@ import { InquiryModal } from "./inquiry-modal";
 
 type Sample = { label: string; type: "email" | "memo"; text: string };
 
-export function QuoteComposer({ customers, samples, aiEnabled }: { customers: Customer[]; samples: Sample[]; aiEnabled: boolean }) {
+export function QuoteComposer({ customers, contacts, samples, aiEnabled }: { customers: Customer[]; contacts: Contact[]; samples: Sample[]; aiEnabled: boolean }) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [sourceType, setSourceType] = useState<"email" | "memo" | "file">("email");
@@ -20,6 +20,7 @@ export function QuoteComposer({ customers, samples, aiEnabled }: { customers: Cu
   const [err, setErr] = useState<string | null>(null);
   const [draft, setDraft] = useState<QuoteDraft | null>(null);
   const [inquiry, setInquiry] = useState<DraftItem | null>(null);
+  const [contactId, setContactId] = useState<number | "">("");
   const resultRef = useRef<HTMLDivElement>(null);
 
   const extract = async () => {
@@ -49,7 +50,7 @@ export function QuoteComposer({ customers, samples, aiEnabled }: { customers: Cu
     setSaving(true); setErr(null);
     try {
       const r = await fetch("/api/quotes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-        customer_id: draft.customer_id, subject: draft.subject || "見積り", requested_delivery: draft.requested_delivery, source_type: draft.source_type, source_text: draft.source_text,
+        customer_id: draft.customer_id, contact_id: contactId || null, subject: draft.subject || "見積り", requested_delivery: draft.requested_delivery, source_type: draft.source_type, source_text: draft.source_text,
         notes: draft.notes,
         items: items.map((it) => ({ product_id: it.product_id, description: it.description, qty: it.qty, unit: it.unit, unit_price: it.unit_price, cost: it.cost, supplier_id: it.supplier_id, remarks: it.remarks })),
       }) });
@@ -106,7 +107,7 @@ export function QuoteComposer({ customers, samples, aiEnabled }: { customers: Cu
                 {showAll && <button type="button" className="text-[11px] text-brand hover:underline mt-1" onClick={() => setDraft({ ...draft, customer_candidates: customers })}>全得意先から選ぶ</button>}
               </div>
               <div className="md:col-span-2">
-                <label className={labelCls}>件名</label>
+                <label className={labelCls}>件名{draft.customer_id && contacts.some((c) => c.customer_id === draft.customer_id) && <span className="ml-3 text-muted">相手: {contacts.filter((c) => c.customer_id === draft.customer_id).map((c) => <button key={c.id} type="button" onClick={() => setContactId(contactId === c.id ? "" : c.id)} className={`ml-1 rounded-full border px-2 py-0.5 text-[11px] ${contactId === c.id ? "bg-brand text-brand-ink border-brand" : "border-line"}`}>{c.name}</button>)}</span>}</label>
                 <input className={inputCls} value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} />
               </div>
               <div>

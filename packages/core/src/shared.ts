@@ -10,3 +10,7 @@ export type { QuoteSummary, PriceHistoryRow, NewQuoteItem } from "./domain/repo"
 export type { ExtractedRequest } from "./ai/extract";
 export type { FollowupDraft, InquiryDraft, ProposalDraft, QuoteReview } from "./ai/draft";
 export type { ExtractInput } from "./ai/extract";
+export type { TimelineItem, LinkDecision, LinkCandidate } from "./domain/deals";
+export type { ContactWorkload } from "./domain/repo";
+export type { BusinessCard } from "./ai/card";
+export type { CustomerOwnerRecord, User } from "./domain/types";

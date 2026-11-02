@@ -1,7 +1,9 @@
 /** 架空の得意先・仕入れ先・商品マスタ（実在の企業・製品とは無関係）。 */
 import type { RouteType } from "../domain/types";
 
-export interface SeedCustomer { code: string; name: string; short_name: string; industry: string; prefecture: string; contact_name: string; contact_email: string; tel: string; payment_terms: string; notes: string; discount: number; }
+export interface SeedCustomer { code: string; name: string; short_name: string; industry: string; prefecture: string; contact_name: string; contact_email: string; tel: string; payment_terms: string; notes: string; discount: number; kind?: "end_user" | "dealer"; }
+export interface SeedContact { customer: string; name: string; department: string; title: string; tel?: string; mobile?: string; email?: string; status?: "active" | "transferred" | "retired"; notes?: string; }
+export interface SeedEndCustomer { customer: string; name: string; industry: string; contact: string; notes?: string; }
 export interface SeedSupplier { code: string; name: string; route_type: RouteType; lead_time_days: number; contact_email: string; }
 export interface SeedProduct { code: string; part_number: string; name: string; maker: string; category: string; unit: string; list_price: number; spec: string; routes: { supplier: string; ratio: number; min_lot: number; lead?: number }[]; revised?: { from: string; ratio: number }; }
 
@@ -20,6 +22,44 @@ export const CUSTOMERS: SeedCustomer[] = [
   { code: "C012", name: "相模電機製作所株式会社", short_name: "相模電機", industry: "電機", prefecture: "神奈川県", contact_name: "山田 亮", contact_email: "yamada@sagami-denki.example.jp", tel: "046-000-0112", payment_terms: "月末締め翌月末払い", notes: "工具は銘柄指定。電設資材はまとめ買い。", discount: 0.79 },
   { code: "C013", name: "武蔵野金属加工株式会社", short_name: "武蔵野金属", industry: "自動車部品", prefecture: "東京都", contact_name: "斎藤 剛", contact_email: "saito@musashino-metal.example.jp", tel: "042-000-0113", payment_terms: "月末締め翌月末払い", notes: "東海精密の二次下請け。切削工具は東海精密と同じ銘柄を使用。", discount: 0.86 },
   { code: "C014", name: "多摩電子部品株式会社", short_name: "多摩電子", industry: "電機", prefecture: "東京都", contact_name: "松本 真由", contact_email: "matsumoto@tama-denshi.example.jp", tel: "042-000-0114", payment_terms: "25日締め翌月末払い", notes: "クリーンルーム用の消耗品を検討中。", discount: 0.87 },
+  { code: "C015", name: "北関東機工販売株式会社", short_name: "北関東機工", industry: "自動車部品", prefecture: "群馬県", contact_name: "石井 和也", contact_email: "ishii@kitakanto-kiko.example.jp", tel: "027-000-0115", payment_terms: "月末締め翌月末払い", notes: "ディーラー。県内の自動車部品工場 10 社ほどに販売。担当者ごとに受け持つ工場が違う。", discount: 0.74, kind: "dealer" },
+  { code: "C016", name: "湘南産業資材株式会社", short_name: "湘南産業資材", industry: "建設", prefecture: "神奈川県", contact_name: "大野 裕子", contact_email: "ono@shonan-sangyo.example.jp", tel: "0466-00-0116", payment_terms: "月末締め翌月末払い", notes: "ディーラー。建設会社・電気工事店向け。支店ごとに担当者が分かれている。", discount: 0.76, kind: "dealer" },
+];
+
+/** 得意先の担当者（架空）。在籍・異動・退職を混ぜ、引継ぎのデモに使う。 */
+export const CONTACTS: SeedContact[] = [
+  { customer: "C001", name: "佐藤 健一", department: "購買部", title: "課長", tel: "052-000-0101", mobile: "090-0000-0101", email: "sato@tokai-seimitsu.example.jp", notes: "価格交渉は必ず相見積り。納期遵守を最重視。" },
+  { customer: "C001", name: "村田 浩", department: "製造2課", title: "工場長", tel: "052-000-0121", email: "murata@tokai-seimitsu.example.jp", notes: "現場の困りごとは村田さんに聞くと早い。第2ラインの責任者。" },
+  { customer: "C001", name: "岡田 真", department: "購買部", title: "主任", status: "transferred", notes: "2026年4月に名古屋支社へ異動。後任は佐藤課長。" },
+  { customer: "C002", name: "鈴木 美咲", department: "購買課", title: "係長", tel: "027-000-0102", email: "suzuki@kitakanto-brg.example.jp" },
+  { customer: "C002", name: "木村 大地", department: "生産技術", title: "", mobile: "090-0000-0202", notes: "切削条件の相談相手。工具の銘柄指定はこの人。" },
+  { customer: "C003", name: "高橋 誠", department: "製造部", title: "部長", tel: "048-000-0103", email: "takahashi@midori-foods.example.jp", notes: "決裁者。HACCP 監査前は衛生資材の相談が増える。" },
+  { customer: "C003", name: "林 由紀", department: "総務", title: "", email: "hayashi@midori-foods.example.jp", notes: "伝票・請求の窓口。" },
+  { customer: "C004", name: "田中 由美", department: "資材課", title: "", tel: "043-000-0104", email: "tanaka@sakura-seika.example.jp" },
+  { customer: "C005", name: "伊藤 翔", department: "工場", title: "", tel: "03-0000-0105", email: "ito@oedo-pan.example.jp" },
+  { customer: "C006", name: "渡辺 大輔", department: "工事部", title: "所長", mobile: "090-0000-0106", email: "watanabe@shonan-kensetsu.example.jp", notes: "現場直行が多く携帯のみ。朝 8 時前がつながりやすい。" },
+  { customer: "C007", name: "山本 浩二", department: "資材", title: "", tel: "029-000-0107", email: "yamamoto@kanto-doboku.example.jp" },
+  { customer: "C008", name: "中村 彩", department: "業務部", title: "主任", tel: "048-000-0108", email: "nakamura@hinode-logi.example.jp" },
+  { customer: "C008", name: "藤田 剛", department: "業務部", title: "部長", status: "retired", notes: "2026年3月に定年退職。梱包資材の年間契約は藤田部長時代の条件。" },
+  { customer: "C009", name: "小林 遼", department: "倉庫管理", title: "", tel: "054-000-0109", email: "kobayashi@fuji-logi.example.jp" },
+  { customer: "C010", name: "加藤 直樹", department: "購買", title: "課長", tel: "043-000-0110", email: "kato@chiba-kasei.example.jp", notes: "SDS 提出を忘れると受け取ってもらえない。" },
+  { customer: "C011", name: "吉田 恵", department: "製造", title: "", tel: "028-000-0111", email: "yoshida@toyo-jushi.example.jp" },
+  { customer: "C012", name: "山田 亮", department: "設備", title: "係長", tel: "046-000-0112", email: "yamada@sagami-denki.example.jp" },
+  { customer: "C013", name: "斎藤 剛", department: "工場", title: "工場長", tel: "042-000-0113", email: "saito@musashino-metal.example.jp" },
+  { customer: "C014", name: "松本 真由", department: "購買", title: "", tel: "042-000-0114", email: "matsumoto@tama-denshi.example.jp" },
+  { customer: "C015", name: "石井 和也", department: "営業1課", title: "課長", tel: "027-000-0115", mobile: "090-0000-0115", email: "ishii@kitakanto-kiko.example.jp", notes: "太田・伊勢崎方面の工場を担当。" },
+  { customer: "C015", name: "前田 沙織", department: "営業2課", title: "", mobile: "090-0000-0215", email: "maeda@kitakanto-kiko.example.jp", notes: "高崎方面を担当。見積り依頼は Excel 添付が多い。" },
+  { customer: "C016", name: "大野 裕子", department: "藤沢支店", title: "支店長", tel: "0466-00-0116", email: "ono@shonan-sangyo.example.jp" },
+  { customer: "C016", name: "三浦 健", department: "横浜支店", title: "", mobile: "090-0000-0216", email: "miura@shonan-sangyo.example.jp", notes: "電気工事店向けの電設資材が中心。" },
+];
+
+/** ディーラーの納入先（得意先の得意先）。 */
+export const END_CUSTOMERS: SeedEndCustomer[] = [
+  { customer: "C015", name: "太田モーター工業", industry: "自動車部品", contact: "石井 和也", notes: "プレスライン。防錆剤・切削油。" },
+  { customer: "C015", name: "伊勢崎ダイカスト", industry: "自動車部品", contact: "石井 和也", notes: "離型剤・耐熱手袋。" },
+  { customer: "C015", name: "高崎ギア製作所", industry: "自動車部品", contact: "前田 沙織", notes: "切削工具の消耗が多い。" },
+  { customer: "C016", name: "藤沢電設工業", industry: "電気工事", contact: "三浦 健" },
+  { customer: "C016", name: "湘南ハウジング", industry: "建設", contact: "大野 裕子", notes: "安全保護具の年次更新。" },
 ];
 
 export const SUPPLIERS: SeedSupplier[] = [
@@ -84,6 +124,7 @@ export const PRODUCTS: SeedProduct[] = [
 
 /** 業種ごとの「よく買うカテゴリ」と重み。 */
 export const INDUSTRY_AFFINITY: Record<string, Record<string, number>> = {
+  // ディーラーは上記の業種を名乗るが、扱いは幅広い（下の業種設定にフォールバック）
   自動車部品: { 切削工具: 5, "油脂・ケミカル": 4, 安全保護具: 3, 空圧機器: 3, 清掃用品: 2, 作業工具: 1 },
   食品製造: { 清掃用品: 5, 梱包資材: 4, 安全保護具: 4, 電設資材: 1, 作業工具: 1 },
   建設: { 安全保護具: 5, 作業工具: 4, 電設資材: 3, 梱包資材: 1 },

@@ -12,3 +12,7 @@ description: 提出済みの見積りの追跡。「どの見積りをフォロ�
 4. ユーザーが実際に連絡したら `record_followup` で記録する（提出済→追跡中に自動遷移）。
 5. 決着したら `set_quote_status`。失注時は必ず理由（price / delivery / competitor / cancelled / other）と一言の詳細を記録する。理由が分からなければユーザーに聞く。
 6. 失注が続く得意先・商品は `lost_reasons` と `price_history` を見て傾向を一言添える（例：価格負けが続くなら仕入れルート見直しを提案）。
+
+## 案件単位で見るとき
+- 「あの話どうなってる？」は `list_deals` → `get_deal` で、3 行要約と時系列を読んでから答える。要約が古そうなら `refresh_deal`。
+- 担当変更の相談（転勤・退職・育休）は `handover_customer` を `dry_run: true` で引継ぎ書を見せ、ユーザーが引継ぎ先を決めたら実行する。実行後は前任者の名前が案件に残ることを伝える。

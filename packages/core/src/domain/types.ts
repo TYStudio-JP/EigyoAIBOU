@@ -24,6 +24,9 @@ export const LOST_REASON_LABEL: Record<LostReason, string> = {
   other: "その他",
 };
 
+export type CustomerKind = "end_user" | "dealer";
+export const CUSTOMER_KIND_LABEL: Record<CustomerKind, string> = { end_user: "エンドユーザー", dealer: "ディーラー（商社・販売店）" };
+
 export interface Customer {
   id: number;
   code: string;
@@ -34,6 +37,8 @@ export interface Customer {
   contact_name: string | null;
   contact_email: string | null;
   tel: string | null;
+  kind: CustomerKind;
+  owner_user_id: number | null;
   payment_terms: string;
   notes: string;
 }
@@ -75,6 +80,8 @@ export interface Quote {
   id: number;
   quote_no: string;
   customer_id: number;
+  contact_id: number | null;
+  deal_id: number | null;
   subject: string;
   status: QuoteStatus;
   requested_delivery: string | null;
@@ -193,6 +200,8 @@ export interface CallMinutes {
 export interface CallRecord {
   id: number;
   customer_id: number | null;
+  contact_id: number | null;
+  deal_id: number | null;
   tel: string | null;
   direction: CallDirection;
   started_at: string;
@@ -208,5 +217,90 @@ export interface CallRecord {
 }
 export interface CallWithCustomer extends CallRecord {
   customer: Customer | null;
+  contact: Contact | null;
   minutes: CallMinutes | null;
+}
+
+// ---------- 担当者・納入先・案件 ----------
+export type ContactStatus = "active" | "transferred" | "retired";
+export const CONTACT_STATUS_LABEL: Record<ContactStatus, string> = { active: "在籍", transferred: "異動", retired: "退職" };
+export interface Contact {
+  id: number;
+  customer_id: number;
+  name: string;
+  department: string;
+  title: string;
+  tel: string | null;
+  mobile: string | null;
+  email: string | null;
+  status: ContactStatus;
+  notes: string;
+  source: string;
+  created_at: string;
+  updated_at: string;
+}
+export interface EndCustomer {
+  id: number;
+  customer_id: number;
+  name: string;
+  industry: string;
+  notes: string;
+  created_at: string;
+}
+export type DealStatus = "inquiry" | "quoting" | "submitted" | "tracking" | "won" | "lost" | "dormant";
+export const DEAL_STATUS_LABEL: Record<DealStatus, string> = {
+  inquiry: "問い合わせ", quoting: "見積り中", submitted: "提出済", tracking: "追跡中", won: "受注", lost: "失注", dormant: "休眠",
+};
+export interface Deal {
+  id: number;
+  customer_id: number;
+  contact_id: number | null;
+  end_customer_id: number | null;
+  title: string;
+  status: DealStatus;
+  summary: string;
+  summary_detail: string;
+  next_action: string;
+  next_action_due: string | null;
+  opened_at: string;
+  last_activity_at: string;
+  closed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export interface DealEvent {
+  id: number;
+  deal_id: number;
+  kind: string;      // call / quote / followup / mail / note / ai / link
+  body: string;
+  ref_type: string | null; // quote / call
+  ref_id: number | null;
+  created_at: string;
+}
+export interface DealWithRefs extends Deal {
+  customer: Customer;
+  contact: Contact | null;
+  end_customer: EndCustomer | null;
+  amount: number;        // 紐づく見積りの合計（受注なら受注額）
+  quote_count: number;
+  call_count: number;
+}
+
+// ---------- ユーザー（自社の営業担当）と得意先の担当履歴 ----------
+export interface User {
+  id: number;
+  name: string;
+  department: string;
+  email: string | null;
+  status: "active" | "inactive";
+  created_at: string;
+}
+export interface CustomerOwnerRecord {
+  id: number;
+  customer_id: number;
+  from_user_id: number | null;
+  to_user_id: number;
+  handed_at: string;
+  note: string;
+  handover_doc: string;
 }

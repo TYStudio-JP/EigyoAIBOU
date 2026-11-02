@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 const desktop = [
   { href: "/", label: "ダッシュボード", icon: "▦" },
   { href: "/calls", label: "電話メモ", icon: "☎" },
+  { href: "/deals", label: "案件", icon: "◆" },
   { href: "/quotes/new", label: "見積りを作る", icon: "✎" },
   { href: "/quotes", label: "見積り一覧", icon: "☰" },
   { href: "/tracking", label: "追跡ボード", icon: "◔" },
@@ -15,8 +16,8 @@ const desktop = [
 const mobile = [
   { href: "/", label: "今日", icon: "▦" },
   { href: "/calls", label: "電話", icon: "☎" },
+  { href: "/deals", label: "案件", icon: "◆" },
   { href: "/quotes", label: "見積り", icon: "☰" },
-  { href: "/tracking", label: "追跡", icon: "◔" },
   { href: "/customers", label: "得意先", icon: "⌂" },
 ];
 

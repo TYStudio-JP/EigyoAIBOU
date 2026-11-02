@@ -2,13 +2,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { CallWithCustomer, Customer } from "@eigyo/core/shared";
+import type { CallWithCustomer, Contact, Customer } from "@eigyo/core/shared";
 import { CALL_REQUEST_LABEL, CALL_STATUS_LABEL } from "@eigyo/core/shared";
 import { Button, Card, LevelBadge, inputCls } from "./ui";
 import { CopyButton } from "./modal";
 import { CallMemo } from "./call-memo";
 
-export function CallDetail({ call, customers, aiEnabled, fresh }: { call: CallWithCustomer; customers: Customer[]; aiEnabled: boolean; fresh?: boolean }) {
+export function CallDetail({ call, customers, contacts, aiEnabled, fresh, deal, dealOptions }: { call: CallWithCustomer; customers: Customer[]; contacts: Contact[]; aiEnabled: boolean; fresh?: boolean; deal?: { id: number; title: string } | null; dealOptions?: { id: number; title: string }[] }) {
   const router = useRouter();
   const m = call.minutes;
   const [subject, setSubject] = useState(call.mail_subject ?? "");
@@ -42,12 +42,23 @@ export function CallDetail({ call, customers, aiEnabled, fresh }: { call: CallWi
           {needs > 0 && <LevelBadge level="warn">担当確認 {needs} 件</LevelBadge>}
         </div>
         <div className="text-sm text-muted mt-1">{{ in: "着信", out: "発信", unknown: "通話" }[call.direction]} {call.started_at.slice(0, 16)}{dur ? `（${dur}）` : ""}{c?.contact_name ? `・${c.contact_name}` : ""}{call.source === "android" ? "・Android で自動検知" : ""}</div>
+        {m && (
+          <div className="text-xs mt-1 flex flex-wrap items-center gap-2">
+            <span className="text-muted">案件:</span>
+            {deal ? <Link href={`/deals/${deal.id}`} className="rounded bg-brand/10 text-brand px-2 py-0.5 font-semibold hover:underline">◆ {deal.title}</Link> : <span className="text-muted">未紐づけ</span>}
+            {dealOptions && dealOptions.length > 0 && (
+              <select className="text-xs rounded border border-line px-1.5 py-0.5" defaultValue="" onChange={async (e) => { if (!e.target.value) return; await fetch(`/api/calls/${call.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deal_id: Number(e.target.value) }) }); router.refresh(); }}>
+                <option value="">別の案件へ…</option>{dealOptions.filter((o) => o.id !== deal?.id).map((o) => <option key={o.id} value={o.id}>{o.title}</option>)}
+              </select>
+            )}
+          </div>
+        )}
         {fresh && !m && <div className="mt-2 rounded-md bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-900">通話を検知しました。忘れないうちに要点を話してください。</div>}
       </div>
 
       {(editMemo || !m) && (
         <Card title={m ? "メモを修正して再処理" : "電話メモ"} action={m ? <Button size="sm" onClick={() => setEditMemo(false)}>閉じる</Button> : undefined}>
-          <CallMemo call={call} customers={customers} aiEnabled={aiEnabled} autostart={fresh} />
+          <CallMemo call={call} customers={customers} contacts={contacts} aiEnabled={aiEnabled} autostart={fresh} />
         </Card>
       )}
 

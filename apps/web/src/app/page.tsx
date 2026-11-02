@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { dashboardStats, followupQueue, listCalls, listQuotes, lostReasonStats, hasApiKey, LOST_REASON_LABEL, type LostReason } from "@eigyo/core";
+import { dashboardStats, dealsToMove, followupQueue, listCalls, listQuotes, lostReasonStats, hasApiKey, LOST_REASON_LABEL, type LostReason } from "@eigyo/core";
+import { currentUser } from "@/lib/user";
+import { DealStatusBadge } from "@/components/deal-badge";
 import { db } from "@/lib/db";
 import { Card, Empty, LinkButton, PageTitle, Stat, StatusBadge } from "@/components/ui";
 import { dateJp, pct, yen } from "@/lib/format";
@@ -7,8 +9,11 @@ import { UrgencyPill } from "@/components/urgency";
 
 export const dynamic = "force-dynamic";
 
-export default function Dashboard() {
+export default async function Dashboard() {
   const d = db();
+  const me = await currentUser(d);
+  const t = new Date().toISOString().slice(0, 10);
+  const deals = dealsToMove(d, 50).filter((x) => !me || x.customer.owner_user_id === me.id).slice(0, 6);
   const stats = dashboardStats(d);
   const queue = followupQueue(d).slice(0, 6);
   const recent = listQuotes(d, { limit: 8 });
@@ -17,7 +22,7 @@ export default function Dashboard() {
   const calls = listCalls(d, { limit: 50 }).filter((c) => c.status === "open" || (c.status === "processed" && c.minutes?.requests.some((r) => r.result?.status === "needs_human")));
   return (
     <>
-      <PageTitle title="今日の営業AI棒" sub="商談・訪問・電話に時間を使えるよう、それ以外を片付けます。" action={<div className="hidden lg:flex gap-2"><LinkButton href="/calls/new">☎ 電話メモ</LinkButton><LinkButton href="/quotes/new" variant="primary">＋ 見積りを作る</LinkButton></div>} />
+      <PageTitle title={`今日の営業AI棒${me ? `　${me.name}` : ""}`} sub="商談・訪問・電話に時間を使えるよう、それ以外を片付けます。" action={<div className="hidden lg:flex gap-2"><LinkButton href="/calls/new">☎ 電話メモ</LinkButton><LinkButton href="/quotes/new" variant="primary">＋ 見積りを作る</LinkButton></div>} />
       {!ai && (
         <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
           ANTHROPIC_API_KEY が未設定のため AI 機能（依頼文の読み取り・文面作成・レビュー）は簡易モードです。<code className="mx-1">.env</code> にキーを設定して再起動してください。
@@ -30,6 +35,25 @@ export default function Dashboard() {
         <Stat label="受注率（累計）" value={pct(stats.win_rate_pct, 0)} sub={`受注 ${stats.by_status.won} / 失注 ${stats.by_status.lost}`} />
       </div>
       <div className="grid lg:grid-cols-5 gap-4">
+        <Card className="lg:col-span-5" title="今日動かす案件（次の一手の期限順）" action={<Link href="/deals" className="text-xs text-brand hover:underline">案件一覧へ →</Link>}>
+          {deals.length === 0 ? <Empty>動かす案件はありません</Empty> : (
+            <ul className="divide-y divide-line">
+              {deals.map((x) => {
+                const overdue = x.next_action_due && x.next_action_due < t;
+                return (
+                  <li key={x.id} className="py-2.5 flex items-center gap-3">
+                    <DealStatusBadge status={x.status} />
+                    <div className="flex-1 min-w-0">
+                      <Link href={`/deals/${x.id}`} className="font-medium hover:underline">{x.customer.short_name}　<span className="text-muted font-normal">{x.title}</span></Link>
+                      <div className={`text-xs truncate ${overdue ? "text-danger" : "text-muted"}`}>→ {x.next_action || "次の一手を決める"}{x.next_action_due ? `（${dateJp(x.next_action_due)}${overdue ? " 期限切れ" : ""}）` : ""}</div>
+                    </div>
+                    <div className="text-right text-sm num">{yen(x.amount)}</div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
         <Card className="lg:col-span-5" title="電話の宿題（メモ未入力・担当確認待ち）" action={<Link href="/calls" className="text-xs text-brand hover:underline">電話メモへ →</Link>}>
           {calls.length === 0 ? <Empty>電話の宿題はありません</Empty> : (
             <ul className="divide-y divide-line">
