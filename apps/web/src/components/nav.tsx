@@ -10,6 +10,9 @@ const desktop = [
   { href: "/quotes", label: "見積り一覧", icon: "☰" },
   { href: "/tracking", label: "追跡ボード", icon: "◔" },
   { href: "/customers", label: "得意先・横展開", icon: "⌂" },
+  { href: "/delivery", label: "納期回答待ち", icon: "⏱" },
+  { href: "/report", label: "営業日報", icon: "✉" },
+  { href: "/pricing-impact", label: "価格改定の影響", icon: "⚠" },
   { href: "/products", label: "商品・仕入れ", icon: "▤" },
   { href: "/settings", label: "設定", icon: "⚙" },
 ];

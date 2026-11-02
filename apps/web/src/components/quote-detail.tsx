@@ -22,7 +22,7 @@ const FLOW: Record<QuoteStatus, { next: QuoteStatus; label: string }[]> = {
   lost: [{ next: "tracking", label: "追跡中に戻す" }],
 };
 
-export function QuoteDetail({ quote, activities, lines, aiEnabled, deal, dealOptions }: { quote: QuoteWithItems; activities: Activity[]; lines: LineCheck[]; aiEnabled: boolean; deal?: { id: number; title: string; status: string } | null; dealOptions?: { id: number; title: string }[] }) {
+export function QuoteDetail({ quote, activities, lines, aiEnabled, deal, dealOptions, keijo }: { quote: QuoteWithItems; activities: Activity[]; lines: LineCheck[]; aiEnabled: boolean; deal?: { id: number; title: string; status: string } | null; dealOptions?: { id: number; title: string }[]; keijo?: { flags: string[]; rows: { line_no: number; description: string; flags: string[] }[] } | null }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [items, setItems] = useState<DraftItem[]>(lines.map((l) => l.draft));
@@ -87,6 +87,7 @@ export function QuoteDetail({ quote, activities, lines, aiEnabled, deal, dealOpt
         </div>
         <div className="no-print flex flex-wrap gap-2">
           <a href={`/api/quotes/${quote.id}/excel`} className="inline-flex items-center rounded-md border border-line bg-surface px-3.5 py-2 text-sm font-medium hover:bg-bg">Excel 見積書</a>
+          {quote.status === "won" && <a href={`/api/quotes/${quote.id}/keijo`} className="inline-flex items-center rounded-md border border-line bg-surface px-3.5 py-2 text-sm font-medium hover:bg-bg">計上指示 Excel</a>}
           <Button onClick={() => window.print()}>印刷</Button>
           {FLOW[quote.status].map((f) => (
             <Button key={f.next} variant={f.next === "won" ? "primary" : f.next === "lost" ? "danger" : "secondary"} busy={busy === "status"} onClick={() => (f.next === "lost" ? setLost(true) : setStatus(f.next))}>{f.label}</Button>
@@ -159,6 +160,17 @@ export function QuoteDetail({ quote, activities, lines, aiEnabled, deal, dealOpt
             {quote.notes && <div className="mt-3 text-xs text-muted border-t border-line pt-2">備考: {quote.notes}</div>}
           </Card>
 
+          {quote.status === "won" && keijo && (
+            <Card className="no-print" title="伝票計上の指示（事務員向け）" action={<a href={`/api/quotes/${quote.id}/keijo`} className="text-xs text-brand hover:underline">Excel をダウンロード</a>}>
+              {keijo.flags.length === 0 && keijo.rows.every((r) => r.flags.length === 0) ? <p className="text-sm text-ok">見積りと基幹の整合に問題はありません。そのまま計上できます。</p> : (
+                <ul className="text-sm space-y-1">
+                  {keijo.flags.map((f, i) => <li key={"h" + i} className="text-danger">・{f}</li>)}
+                  {keijo.rows.filter((r) => r.flags.length).map((r) => <li key={r.line_no}><b>明細{r.line_no} {r.description}</b><ul className="pl-4 text-xs text-warn">{r.flags.map((f, i) => <li key={i}>・{f}</li>)}</ul></li>)}
+                </ul>
+              )}
+              <p className="text-xs text-muted mt-2">得意先コード・商品コード・仕入れ先コード・単価・納期を 1 行ずつ並べ、見積りや過去単価と違う点を赤く示します。</p>
+            </Card>
+          )}
           <Card className="no-print" title="提出前レビュー（営業AI棒）" action={<Button size="sm" variant="primary" busy={busy === "review"} onClick={runReview} disabled={!aiEnabled} title={aiEnabled ? "" : "API キー未設定"}>AI にレビューさせる</Button>}>
             {review ? (
               <div className="text-sm space-y-2">
