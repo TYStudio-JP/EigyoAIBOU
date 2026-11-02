@@ -25,7 +25,7 @@ export function CrossSellPanel({ result, aiEnabled }: { result: CrossSellResult;
         <Button size="sm" variant="primary" busy={busy} onClick={run} disabled={!aiEnabled || result.candidates.length === 0}>AI で提案トークとメールを作る</Button>
       }>
         {result.candidates.length === 0 ? <Empty>候補がありません（同業の得意先が少ないか、既に主要商品を購入済み）</Empty> : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm min-w-[40rem]">
             <thead className="text-xs text-muted"><tr><th className="text-left font-normal py-1">商品</th><th className="text-left font-normal">根拠（同業の実績）</th><th className="text-right font-normal">参考売価</th><th className="text-right font-normal">最安原価</th><th className="text-right font-normal">スコア</th></tr></thead>
             <tbody>
               {result.candidates.map((c) => (
@@ -41,7 +41,7 @@ export function CrossSellPanel({ result, aiEnabled }: { result: CrossSellResult;
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
         {err && <p className="text-sm text-danger mt-2">{err}</p>}
         <p className="text-xs text-muted mt-3">比較した同業: {result.peers.map((p) => `${p.customer.short_name}（類似度 ${(p.similarity * 100).toFixed(0)}%）`).join("、") || "なし"}</p>

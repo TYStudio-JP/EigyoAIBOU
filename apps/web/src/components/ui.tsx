@@ -11,16 +11,16 @@ export function Card({ title, action, children, className = "" }: { title?: Reac
           {action}
         </header>
       )}
-      <div className="p-4">{children}</div>
+      <div className="p-3 lg:p-4">{children}</div>
     </section>
   );
 }
 
 export function PageTitle({ title, sub, action }: { title: string; sub?: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className="flex items-end justify-between mb-5 gap-4">
+    <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between mb-4 lg:mb-5 gap-2 lg:gap-4">
       <div>
-        <h1 className="text-2xl font-bold">{title}</h1>
+        <h1 className="text-xl lg:text-2xl font-bold">{title}</h1>
         {sub && <p className="text-sm text-muted mt-1">{sub}</p>}
       </div>
       {action}

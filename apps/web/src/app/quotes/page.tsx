@@ -13,20 +13,25 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
   const rows = listQuotes(db(), { status: status.length ? status : undefined, q: sp.q });
   return (
     <>
-      <PageTitle title="見積り一覧" action={<LinkButton href="/quotes/new" variant="primary">＋ 見積りを作る</LinkButton>} />
+      <PageTitle title="見積り一覧" action={<span className="hidden lg:inline-flex"><LinkButton href="/quotes/new" variant="primary">＋ 見積りを作る</LinkButton></span>} />
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <Link href="/quotes" className={`text-xs rounded-full px-3 py-1 border ${!status.length ? "bg-brand text-brand-ink border-brand" : "border-line bg-surface"}`}>すべて</Link>
         {ALL.map((s) => (
           <Link key={s} href={`/quotes?status=${s}`} className={`text-xs rounded-full px-3 py-1 border ${status.includes(s) ? "bg-brand text-brand-ink border-brand" : "border-line bg-surface"}`}>{STATUS_LABEL[s]}</Link>
         ))}
-        <form className="ml-auto" action="/quotes">
+        <form className="w-full lg:w-auto lg:ml-auto" action="/quotes">
           {status.length > 0 && <input type="hidden" name="status" value={status.join(",")} />}
-          <input name="q" defaultValue={sp.q ?? ""} placeholder="番号・件名・得意先で検索" className="rounded-md border border-line px-3 py-1.5 text-sm w-64" />
+          <input name="q" defaultValue={sp.q ?? ""} placeholder="番号・件名・得意先で検索" className="rounded-md border border-line px-3 py-1.5 text-sm w-full lg:w-64" />
         </form>
       </div>
       <Card>
-        {rows.length === 0 ? <Empty>該当する見積りがありません</Empty> : (
-          <table className="w-full text-sm">
+        {rows.length === 0 ? <Empty>該当する見積りがありません</Empty> : (<>
+          <ul className="lg:hidden divide-y divide-line">
+            {rows.map((q) => (
+              <li key={q.id}><Link href={`/quotes/${q.id}`} className="flex items-center gap-3 py-3 active:bg-bg"><div className="flex-1 min-w-0"><div className="font-semibold truncate">{q.customer_name}</div><div className="text-xs text-muted truncate">{q.subject}</div><div className="text-[11px] text-muted num">{q.quote_no}・更新 {dateJp(q.updated_at)}</div></div><div className="text-right shrink-0"><div className="num font-medium">{yen(q.total)}</div><StatusBadge status={q.status} /></div></Link></li>
+            ))}
+          </ul>
+          <table className="hidden lg:table w-full text-sm">
             <thead className="text-xs text-muted"><tr><th className="text-left font-normal py-1">見積番号</th><th className="text-left font-normal">得意先</th><th className="text-left font-normal">件名</th><th className="text-right font-normal">金額</th><th className="text-right font-normal">粗利</th><th className="text-left font-normal pl-4">状態</th><th className="text-right font-normal">提出</th><th className="text-right font-normal">更新</th></tr></thead>
             <tbody>
               {rows.map((q) => (
@@ -43,7 +48,7 @@ export default async function QuotesPage({ searchParams }: { searchParams: Promi
               ))}
             </tbody>
           </table>
-        )}
+        </>)}
       </Card>
     </>
   );

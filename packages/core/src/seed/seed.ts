@@ -1,9 +1,11 @@
 import type { Db } from "../db/connection";
 import { CUSTOMERS, INDUSTRY_AFFINITY, PRODUCTS, SUPPLIERS } from "./data";
 import {
-  addActivity, addDays, addSupplierPrice, createQuote, getSettings, saveSettings, setQuoteStatus, today,
+  addActivity, addDays, addSupplierPrice, createCall, createQuote, getSettings, saveSettings, setQuoteStatus, today, updateCall,
   upsertCustomer, upsertProduct, upsertSupplier, type NewQuoteItem,
 } from "../domain/repo";
+import { executeCallRequests } from "../domain/call-actions";
+import type { CallMinutes } from "../domain/types";
 import { DEFAULT_SETTINGS, type LostReason } from "../domain/types";
 
 /** 決定的な乱数（デモが毎回同じ結果になるように）。 */
@@ -24,7 +26,7 @@ export function seedDatabase(db: Db, opts: SeedOptions = {}): { customers: numbe
   const pick = <T>(arr: T[]): T => arr[Math.floor(rnd() * arr.length)];
   const between = (a: number, b: number) => a + rnd() * (b - a);
 
-  db.exec("DELETE FROM activities; DELETE FROM quote_items; DELETE FROM quotes; DELETE FROM supplier_prices; DELETE FROM products; DELETE FROM suppliers; DELETE FROM customers; DELETE FROM settings;");
+  db.exec("DELETE FROM calls; DELETE FROM activities; DELETE FROM quote_items; DELETE FROM quotes; DELETE FROM supplier_prices; DELETE FROM products; DELETE FROM suppliers; DELETE FROM customers; DELETE FROM settings;");
   saveSettings(db, DEFAULT_SETTINGS);
 
   const customers = CUSTOMERS.map((c) => ({ ...upsertCustomer(db, c), discount: c.discount }));
@@ -165,6 +167,34 @@ export function seedDatabase(db: Db, opts: SeedOptions = {}): { customers: numbe
   setQuoteStatus(db, q2.id, "submitted", { at: `${d2} 14:00:00` });
   setQuoteStatus(db, q2.id, "tracking", { at: `${addDays(d2, 4)} 10:00:00` });
   addActivity(db, q2.id, "followup", "訪問時に確認。購買の稟議中、競合1社あり（価格勝負になりそう）", `${addDays(d2, 4)} 10:10:00`);
+
+  // 電話メモのサンプル：①Android から自動作成されたメモ未入力の通話 ②処理済みの通話（議事録・依頼の実行結果・確認メール）
+  const sagami = customers.find((c) => c.code === "C012")!;
+  createCall(db, { customer_id: sagami.id, tel: sagami.tel, direction: "in", started_at: `${asOf} 09:42:00`, duration_sec: 312, source: "android" });
+  const call2 = createCall(db, {
+    customer_id: tokai.id, tel: tokai.tel, direction: "in", started_at: `${addDays(asOf, -1)} 15:20:00`, duration_sec: 540, source: "manual",
+    memo: "東海精密の佐藤さんから。第2ラインの件、エンドミルφ10の単価、前回7,720円だったけど競合が7,000円出してきたからなんとかならないかって。あと切削油18Lを8缶、来週水曜までに入れてほしい。それと防錆スプレーの24本入りの在庫あるか聞かれた。来週の火曜に訪問の約束した。",
+  });
+  const minutes2: CallMinutes = {
+    summary: `・${addDays(asOf, -1)} 15:20 東海精密 佐藤様より入電（約9分）\n・第2ライン用エンドミル φ10 の単価について、競合が 7,000 円を提示との情報\n・水溶性切削油 18L × 8 缶を来週水曜までに納品希望\n・防錆剤スプレー 420ml 24本入の在庫有無の問い合わせ\n・来週火曜に訪問することで合意`,
+    counterpart: "佐藤 健一 様（購買）",
+    requests: [
+      { kind: "price", detail: "超硬エンドミル φ10 4枚刃 の単価。競合提示 7,000 円に対抗できるか", product_query: "EM-10-4F", qty: 10, unit: "本", asked_price: 7000, requested_delivery: null, quote_no: null, items: [] },
+      { kind: "delivery", detail: "水溶性切削油 18L を 8 缶、来週水曜までに納品希望", product_query: "CO-18", qty: 8, unit: "缶", asked_price: null, requested_delivery: addDays(asOf, 8), quote_no: null, items: [] },
+      { kind: "product_inquiry", detail: "防錆剤スプレー 420ml 24本入の在庫有無", product_query: "RP-420", qty: 2, unit: "箱", asked_price: null, requested_delivery: null, quote_no: null, items: [] },
+    ],
+    promises: ["来週火曜 10:00 に訪問", "切削油の納期を本日中に回答"],
+    rep_todos: ["エンドミルの対抗価格について上長に確認", "火曜訪問の準備（第2ライン立ち上げ品の提案）"],
+    next_contact: `${addDays(asOf, 2)}（訪問）`,
+    mood: "neutral",
+  };
+  const executed = executeCallRequests(db, { ...call2, minutes: null }, minutes2);
+  updateCall(db, call2.id, {
+    minutes_json: JSON.stringify(executed),
+    status: "processed",
+    mail_subject: "【ご確認】本日お電話いただいた件（エンドミル単価・切削油納期ほか）",
+    mail_body: `東海精密工業株式会社\n佐藤 健一 様\n\nいつもお世話になっております。ツヤ商事 山田です。\n本日はお電話ありがとうございました。以下の通り承りましたのでご確認ください。\n\n1. 超硬エンドミル φ10 4枚刃（EM-10-4F）単価\n　ご提示いただいた 7,000 円について社内で確認のうえ、明日中にご回答いたします。\n2. 水溶性切削油 18L × 8 缶\n　${executed.requests[1].result?.headline ?? ""}\n3. 防錆剤スプレー 420ml 24本入\n　${executed.requests[2].result?.headline ?? ""}\n\n来週火曜 10:00 にお伺いいたします。引き続きよろしくお願いいたします。\n\n株式会社ツヤ商事 営業一課 山田 太郎\nTEL 03-0000-0000`,
+  });
 
   getSettings(db);
   return { customers: customers.length, suppliers: SUPPLIERS.length, products: products.length, quotes: made + 2 };

@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS customers (
   prefecture    TEXT NOT NULL,
   contact_name  TEXT,
   contact_email TEXT,
+  tel           TEXT,
   payment_terms TEXT NOT NULL DEFAULT '月末締め翌月末払い',
   notes         TEXT NOT NULL DEFAULT '',
   created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
@@ -89,6 +90,23 @@ CREATE TABLE IF NOT EXISTS activities (
   created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 
+CREATE TABLE IF NOT EXISTS calls (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id   INTEGER REFERENCES customers(id),
+  tel           TEXT,
+  direction     TEXT NOT NULL CHECK (direction IN ('in','out','unknown')) DEFAULT 'unknown',
+  started_at    TEXT NOT NULL,
+  duration_sec  INTEGER,
+  source        TEXT NOT NULL DEFAULT 'manual',
+  memo          TEXT NOT NULL DEFAULT '',
+  minutes_json  TEXT,
+  mail_subject  TEXT,
+  mail_body     TEXT,
+  status        TEXT NOT NULL CHECK (status IN ('open','processed','sent','closed')) DEFAULT 'open',
+  created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  updated_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+
 CREATE TABLE IF NOT EXISTS settings (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -100,4 +118,6 @@ CREATE INDEX IF NOT EXISTS idx_quotes_customer ON quotes(customer_id);
 CREATE INDEX IF NOT EXISTS idx_quotes_status ON quotes(status);
 CREATE INDEX IF NOT EXISTS idx_supplier_prices_product ON supplier_prices(product_id);
 CREATE INDEX IF NOT EXISTS idx_activities_quote ON activities(quote_id);
+CREATE INDEX IF NOT EXISTS idx_calls_customer ON calls(customer_id);
+CREATE INDEX IF NOT EXISTS idx_calls_status ON calls(status);
 `;

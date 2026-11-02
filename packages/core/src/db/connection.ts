@@ -40,8 +40,15 @@ export function openDb(path: string = defaultDbPath()): DatabaseSync {
   if (path !== ":memory:") db.exec("PRAGMA journal_mode = WAL");
   db.exec("PRAGMA foreign_keys = ON");
   db.exec(SCHEMA_SQL);
+  migrate(db);
   cached = { path, db };
   return db;
+}
+
+/** 既存 DB への後方互換マイグレーション（列追加のみ）。 */
+function migrate(db: DatabaseSync): void {
+  const cols = (db.prepare("PRAGMA table_info(customers)").all() as { name: string }[]).map((c) => c.name);
+  if (!cols.includes("tel")) db.exec("ALTER TABLE customers ADD COLUMN tel TEXT");
 }
 
 export function dbExists(path: string = defaultDbPath()): boolean {

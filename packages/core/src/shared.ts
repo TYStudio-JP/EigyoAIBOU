@@ -9,3 +9,4 @@ export type { FollowupItem } from "./domain/followup";
 export type { QuoteSummary, PriceHistoryRow, NewQuoteItem } from "./domain/repo";
 export type { ExtractedRequest } from "./ai/extract";
 export type { FollowupDraft, InquiryDraft, ProposalDraft, QuoteReview } from "./ai/draft";
+export type { ExtractInput } from "./ai/extract";

@@ -72,7 +72,7 @@ export function QuoteDetail({ quote, activities, lines, aiEnabled }: { quote: Qu
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-3"><h1 className="text-2xl font-bold num">{quote.quote_no}</h1><StatusBadge status={quote.status} />{overall !== "ok" && <LevelBadge level={overall}>{{ info: "参考情報あり", warn: "要確認あり", danger: "赤字あり", ok: "" }[overall]}</LevelBadge>}</div>
+          <div className="flex items-center gap-3"><h1 className="text-xl lg:text-2xl font-bold num">{quote.quote_no}</h1><StatusBadge status={quote.status} />{overall !== "ok" && <LevelBadge level={overall}>{{ info: "参考情報あり", warn: "要確認あり", danger: "赤字あり", ok: "" }[overall]}</LevelBadge>}</div>
           <div className="text-sm mt-1"><Link href={`/customers/${quote.customer.id}`} className="font-medium hover:underline">{quote.customer.name}</Link><span className="text-muted">　{quote.customer.contact_name ?? ""}　／　{quote.subject}</span></div>
           <div className="text-xs text-muted mt-1">作成 {dateJp(quote.created_at)} ／ 提出 {dateJp(quote.submitted_at)} ／ 有効期限 {dateJp(quote.valid_until)} ／ 希望納期 <b className="text-ink">{dateJp(quote.requested_delivery)}</b> ／ 回答納期 <b className="text-ink">{dateJp(quote.promised_delivery)}</b></div>
         </div>
@@ -91,12 +91,27 @@ export function QuoteDetail({ quote, activities, lines, aiEnabled }: { quote: Qu
         <div className="lg:col-span-2 space-y-4">
           <Card title="明細" action={
             <div className="no-print flex gap-2">
-              {editing ? <><Button size="sm" onClick={() => { setEditing(false); setItems(lines.map((l) => l.draft)); }}>取消</Button><Button size="sm" variant="primary" busy={busy === "items"} onClick={saveItems}>保存</Button></> : <Button size="sm" onClick={() => setEditing(true)}>明細を編集</Button>}
+              {editing ? <><Button size="sm" onClick={() => { setEditing(false); setItems(lines.map((l) => l.draft)); }}>取消</Button><Button size="sm" variant="primary" busy={busy === "items"} onClick={saveItems}>保存</Button></> : <span className="hidden lg:inline-flex"><Button size="sm" onClick={() => setEditing(true)}>明細を編集</Button></span>}
             </div>
           }>
             {editing ? <ItemsEditor customerId={quote.customer_id} items={items} onChange={onItems} excludeQuoteId={quote.id} onInquiry={setInquiry} /> : (
               <>
-                <table className="w-full text-sm">
+                <ul className="lg:hidden divide-y divide-line">
+                  {quote.items.map((it, i) => {
+                    const lc = lines[i];
+                    const m = it.unit_price ? ((it.unit_price - it.cost) / it.unit_price) * 100 : 0;
+                    return (
+                      <li key={it.id} className="py-2.5">
+                        <div className="flex justify-between gap-2"><div className="font-medium text-sm">{it.description}</div><div className="num text-sm shrink-0">{yen(it.qty * it.unit_price)}</div></div>
+                        <div className="text-xs text-muted num mt-0.5">{it.qty} {it.unit} × {yen(it.unit_price)}　原価 {yen(it.cost)}　粗利 <span className={m < 0 ? "text-danger font-bold" : m < 15 ? "text-warn" : ""}>{pct(m, 0)}</span></div>
+                        <div className="flex flex-wrap gap-1 mt-1">{lc?.checks.length ? lc.checks.map((c) => <LevelBadge key={c.code} level={c.level}>{c.title}</LevelBadge>) : it.product_id ? <LevelBadge level="ok">OK</LevelBadge> : null}</div>
+                        {lc?.draft.proposal && <button type="button" className="text-[11px] text-brand mt-1" onClick={() => setOpen(open === i ? null : i)}>{open === i ? "閉じる" : "根拠・履歴"}</button>}
+                        {open === i && lc?.draft.proposal && <div className="mt-2 rounded bg-bg p-2 overflow-x-auto"><ProposalDetail item={lc.draft} onInquiry={setInquiry} /></div>}
+                      </li>
+                    );
+                  })}
+                </ul>
+                <table className="hidden lg:table w-full text-sm">
                   <thead className="text-xs text-muted"><tr><th className="text-left font-normal py-1 w-8">#</th><th className="text-left font-normal">品名</th><th className="text-right font-normal px-2">数量</th><th className="text-right font-normal px-2">単価</th><th className="text-right font-normal px-2">金額</th><th className="text-right font-normal px-2">原価</th><th className="text-right font-normal px-2">粗利</th><th className="text-left font-normal pl-3 no-print w-44">チェック</th></tr></thead>
                   <tbody>
                     {quote.items.map((it, i) => {
@@ -123,7 +138,7 @@ export function QuoteDetail({ quote, activities, lines, aiEnabled }: { quote: Qu
                     })}
                   </tbody>
                 </table>
-                <div className="flex justify-end gap-6 mt-3 text-sm">
+                <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 mt-3 text-sm">
                   <span className="text-muted">原価 <span className="num">{yen(quote.total_cost)}</span></span>
                   <span className={quote.margin_pct < 15 ? "text-warn" : "text-ok"}>粗利率 <span className="num font-semibold">{pct(quote.margin_pct)}</span></span>
                   <span>小計 <span className="num">{yen(quote.total)}</span></span>
