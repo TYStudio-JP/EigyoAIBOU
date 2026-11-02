@@ -28,7 +28,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   const cross = crossSellCandidates(d, c.id);
   return (
     <>
-      <PageTitle title={c.name} sub={`${c.code}・${CUSTOMER_KIND_LABEL[c.kind]}・${c.industry}・${c.prefecture}・${c.payment_terms}・TEL ${c.tel ?? "-"}`} />
+      <PageTitle title={c.name} sub={`${c.code}・${CUSTOMER_KIND_LABEL[c.kind]}・${c.industry}・${c.prefecture}・${c.payment_terms}・TEL ${c.tel ?? "-"}`} action={<Link href={`/customers/${c.id}/brief`} className="inline-flex items-center rounded-md bg-brand text-brand-ink px-3.5 py-2 text-sm font-medium">訪問前ブリーフ</Link>} />
       <div className="grid lg:grid-cols-3 gap-4 mb-4">
         <Card title="得意先メモ" className="lg:col-span-1"><p className="text-sm">{c.notes || "—"}</p></Card>
         <div className="lg:col-span-2"><HandoverPanel customerId={c.id} owner={c.owner_user_id ? getUser(d, c.owner_user_id) : null} users={listUsers(d, { includeInactive: true })} history={ownerHistory(d, c.id)} aiEnabled={hasApiKey()} meId={me?.id ?? null} /></div>

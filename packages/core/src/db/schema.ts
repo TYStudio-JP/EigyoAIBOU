@@ -185,6 +185,16 @@ CREATE TABLE IF NOT EXISTS calls (
   updated_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 
+CREATE TABLE IF NOT EXISTS daily_reports (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  date          TEXT NOT NULL,
+  user_id       INTEGER NOT NULL DEFAULT 0,
+  body          TEXT NOT NULL,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  updated_at    TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  UNIQUE(date, user_id)
+);
+
 CREATE TABLE IF NOT EXISTS settings (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL

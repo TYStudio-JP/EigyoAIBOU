@@ -99,3 +99,35 @@ export async function excelToText(buffer: Buffer, maxRows = 300): Promise<string
   });
   return out.join("\n");
 }
+
+/** 伝票計上指示を Excel に出力する（事務員が基幹に入力する前提。確認事項は赤字）。 */
+export async function keijoToExcel(sheet: import("./keijo").KeijoSheet, settings: Settings): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = settings.company_name;
+  const ws = wb.addWorksheet("計上指示", { pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: true } });
+  const q = sheet.quote;
+  ws.getCell("A1").value = "伝票計上指示"; ws.getCell("A1").font = { size: 16, bold: true };
+  const head: [string, string | number][] = [
+    ["見積番号", q.quote_no], ["得意先コード", sheet.customer_code], ["得意先", q.customer.name], ["担当者", q.customer.contact_name ?? ""],
+    ["件名", q.subject], ["受注日", q.closed_at?.slice(0, 10) ?? ""], ["納期", q.promised_delivery ?? q.requested_delivery ?? ""], ["支払条件", q.customer.payment_terms], ["営業担当", settings.sales_rep],
+  ];
+  head.forEach(([k, v], i) => { ws.getCell(3 + i, 1).value = k; ws.getCell(3 + i, 1).font = { bold: true }; ws.getCell(3 + i, 2).value = v; });
+  if (sheet.flags.length) { ws.getCell(3, 5).value = "確認事項"; ws.getCell(3, 5).font = { bold: true, color: { argb: "FFB91C1C" } }; sheet.flags.forEach((f, i) => { ws.getCell(4 + i, 5).value = f; ws.getCell(4 + i, 5).font = { color: { argb: "FFB91C1C" } }; }); }
+  const r0 = 3 + head.length + 1;
+  const cols = ["行", "商品コード", "品番", "品名", "数量", "単位", "売単価", "売金額", "仕入先コード", "仕入先", "仕入単価", "仕入金額", "粗利%", "納期", "確認事項"];
+  ws.columns = [{ width: 4 }, { width: 10 }, { width: 12 }, { width: 34 }, { width: 7 }, { width: 6 }, { width: 10 }, { width: 12 }, { width: 10 }, { width: 22 }, { width: 10 }, { width: 12 }, { width: 7 }, { width: 11 }, { width: 50 }];
+  cols.forEach((c, i) => { const cell = ws.getCell(r0, i + 1); cell.value = c; cell.font = { bold: true }; cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8EEF5" } }; cell.border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } }; });
+  sheet.rows.forEach((row, i) => {
+    const r = r0 + 1 + i;
+    const vals: (string | number)[] = [row.line_no, row.product_code, row.part_number, row.description, row.qty, row.unit, row.sell_price, row.sell_amount, row.supplier_code, row.supplier_name, row.cost, row.cost_amount, row.margin_pct, row.delivery, row.flags.join(" / ")];
+    vals.forEach((v, j) => { const cell = ws.getCell(r, j + 1); cell.value = v; cell.border = { top: { style: "hair" }, bottom: { style: "hair" }, left: { style: "thin" }, right: { style: "thin" } }; if ([6, 7, 10, 11].includes(j)) cell.numFmt = "#,##0"; if (j === 14 && row.flags.length) cell.font = { color: { argb: "FFB91C1C" } }; });
+    if (row.flags.length) ws.getCell(r, 1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFEE2E2" } };
+  });
+  const rt = r0 + 1 + sheet.rows.length;
+  ws.getCell(rt, 7).value = "合計"; ws.getCell(rt, 7).font = { bold: true };
+  ws.getCell(rt, 8).value = sheet.total_sell; ws.getCell(rt, 8).numFmt = "#,##0"; ws.getCell(rt, 8).font = { bold: true };
+  ws.getCell(rt, 12).value = sheet.total_cost; ws.getCell(rt, 12).numFmt = "#,##0";
+  ws.getCell(rt, 13).value = sheet.total_sell ? Math.round(((sheet.total_sell - sheet.total_cost) / sheet.total_sell) * 1000) / 10 : 0;
+  const buf = await wb.xlsx.writeBuffer();
+  return Buffer.from(buf as ArrayBuffer);
+}

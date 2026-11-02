@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { checkPrice, currentSupplierPrices, getDeal, getQuote, getSettings, hasApiKey, listActivities, listDeals, proposePrice } from "@eigyo/core";
+import { buildKeijo, checkPrice, currentSupplierPrices, getDeal, getQuote, getSettings, hasApiKey, listActivities, listDeals, proposePrice } from "@eigyo/core";
 import { db } from "@/lib/db";
 import { pickProduct, type DraftItem } from "@/lib/draft";
 import { QuoteDetail, type LineCheck } from "@/components/quote-detail";
@@ -28,5 +28,6 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
     return { line_no: it.line_no, checks, draft: { ...base, proposal, checks } };
   });
   const deal = q.deal_id ? getDeal(d, q.deal_id) : null;
-  return <QuoteDetail quote={q} activities={listActivities(d, q.id)} lines={lines} aiEnabled={hasApiKey()} deal={deal ? { id: deal.id, title: deal.title, status: deal.status } : null} dealOptions={listDeals(d, { customerId: q.customer_id, openOnly: true, limit: 30 }).map((x) => ({ id: x.id, title: x.title }))} />;
+  const keijo = q.status === "won" ? (() => { const k = buildKeijo(d, q.id, settings); return { flags: k.flags, rows: k.rows.map((r) => ({ line_no: r.line_no, description: r.description, flags: r.flags })) }; })() : null;
+  return <QuoteDetail quote={q} activities={listActivities(d, q.id)} lines={lines} aiEnabled={hasApiKey()} deal={deal ? { id: deal.id, title: deal.title, status: deal.status } : null} dealOptions={listDeals(d, { customerId: q.customer_id, openOnly: true, limit: 30 }).map((x) => ({ id: x.id, title: x.title }))} keijo={keijo} />;
 }

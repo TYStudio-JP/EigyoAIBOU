@@ -28,6 +28,9 @@ export default async function Dashboard() {
           ANTHROPIC_API_KEY が未設定のため AI 機能（依頼文の読み取り・文面作成・レビュー）は簡易モードです。<code className="mx-1">.env</code> にキーを設定して再起動してください。
         </div>
       )}
+      <div className="lg:hidden grid grid-cols-4 gap-2 mb-4 text-center text-xs">
+        {[["/calls/new", "☎", "電話メモ"], ["/quotes/new", "✎", "見積り"], ["/report", "✉", "日報"], ["/delivery", "⏱", "納期"]].map(([h, i, l]) => <Link key={h} href={h} className="rounded-lg bg-surface border border-line py-2.5"><div className="text-xl">{i}</div>{l}</Link>)}
+      </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <Stat label="要フォロー（提出済・追跡中）" value={stats.by_status.submitted + stats.by_status.tracking} sub={`提出済 ${stats.by_status.submitted} / 追跡中 ${stats.by_status.tracking}`} tone="warn" />
         <Stat label="未決着の見積り金額" value={yen(stats.open_amount)} sub="税抜合計" />

@@ -13,6 +13,7 @@ import {
   proposePrice, ROUTE_LABEL, seedDatabase, setQuoteStatus, STATUS_LABEL, today, extractQuoteRequest, extractQuoteRequestFallback,
   createCall, executeCallRequests, findCustomerByTel, listCalls, structureCallMemo, composeCallConfirmation, updateCall, CALL_REQUEST_LABEL,
   adjudicateDealLink, attachCallToDeal, attachQuoteToDeal, dealTimeline, getDeal, handoverCustomer, handoverFacts, listContacts, listDeals, listUsers, refreshDealSummary, DEAL_STATUS_LABEL, CONTACT_STATUS_LABEL,
+  buildKeijo, deliveryWaitingList, recordSupplierDelivery, deliveryNotice, priceImpact, reportFacts, reportDraft, visitBrief, listSuppliers,
   type LostReason, type NewQuoteItem, type QuoteStatus,
 } from "@eigyo/core";
 
@@ -277,6 +278,46 @@ server.registerTool("handover_customer", {
   const rec = handoverCustomer(db, c.id, u.id, { note });
   return text({ ok: true, customer: c.name, to: u.name, handed_at: rec.handed_at, handover_doc_chars: rec.handover_doc.length });
 });
+
+server.registerTool("keijo_check", {
+  title: "伝票計上の指示と整合チェック",
+  description: "受注見積りから計上指示（得意先コード・商品コード・仕入れ先コード・単価・納期）を作り、見積りや過去単価との差異を列挙する。Web の見積り詳細から Excel も出せる。",
+  inputSchema: { quote_no: z.string() },
+}, async ({ quote_no }) => { const q = getQuoteByNo(db, quote_no); if (!q) throw new Error("見積りが見つかりません"); const k = buildKeijo(db, q.id, getSettings(db)); return text({ quote_no, customer_code: k.customer_code, flags: k.flags, rows: k.rows, total_sell: k.total_sell, total_cost: k.total_cost, excel_url: `http://localhost:3000/api/quotes/${q.id}/keijo` }); });
+
+server.registerTool("delivery_waiting", {
+  title: "納期回答待ちの一覧",
+  description: "仕入れ先の納期回答が無い見積り明細を返す。",
+  inputSchema: {},
+}, async () => text(deliveryWaitingList(db).map((w) => ({ quote_no: w.quote.quote_no, customer: w.quote.customer.short_name, requested_delivery: w.quote.requested_delivery, overdue: w.overdue, items: w.waiting_items.map((it) => ({ item_id: it.id, description: it.description, qty: it.qty, supplier: it.supplier?.name ?? null })) }))));
+
+server.registerTool("record_delivery", {
+  title: "納期回答を記録",
+  description: "仕入れ先からの納期回答を明細に記録する。全明細が揃うと回答納期が見積りに入り、得意先向けの納期連絡文を返す。",
+  inputSchema: { quote_no: z.string(), item_id: z.number().int(), supplier_delivery: z.string().describe("YYYY-MM-DD"), note: z.string().optional() },
+}, async ({ quote_no, item_id, supplier_delivery, note }) => { const q = getQuoteByNo(db, quote_no); if (!q) throw new Error("見積りが見つかりません"); const r = recordSupplierDelivery(db, q.id, item_id, supplier_delivery, note); const s = getSettings(db); return text({ promised_delivery: r.promised_delivery, notice: r.promised_delivery ? deliveryNotice(r, s.company_name, s.sales_rep) : null }); });
+
+server.registerTool("price_impact", {
+  title: "価格改定の影響一覧",
+  description: "現在の仕入れ値（または値上げシミュレーション）で、直近の受注単価だと粗利下限を割る得意先×商品を、取り戻すべき額の大きい順に返す。",
+  inputSchema: { pct: z.number().optional().describe("仕入れ値の上昇率 %（省略時は現状）"), supplier: z.string().optional(), category: z.string().optional() },
+}, async ({ pct, supplier, category }) => {
+  const sid = supplier ? listSuppliers(db).find((s) => s.name.includes(supplier))?.id ?? null : null;
+  const r = priceImpact(db, pct ? { pct, supplier_id: sid, category: category ?? null } : null);
+  return text(r.rows.filter((x) => pct || x.level !== "ok").slice(0, 50).map((x) => ({ customer: x.customer.short_name, product: x.product.name, last_price: x.last_price, cost_before: x.cost_before, cost_now: x.cost_now, margin_before: x.margin_before, margin_now: x.margin_now, needed_price: x.needed_price, gap_amount: x.gap_amount, level: x.level })));
+});
+
+server.registerTool("daily_report", {
+  title: "営業日報の下書き",
+  description: "指定日（省略時は今日）の電話・見積り・フォロー・受注失注・案件の動きから日報の下書きを返す。",
+  inputSchema: { date: z.string().optional().describe("YYYY-MM-DD"), user: z.string().optional().describe("自社ユーザー名（省略時は全員）") },
+}, async ({ date, user }) => { const u = user ? listUsers(db, { includeInactive: true }).find((x) => x.name.includes(user)) : null; return text(reportDraft(reportFacts(db, date ?? today(), u?.id ?? null))); });
+
+server.registerTool("visit_brief", {
+  title: "訪問前ブリーフ",
+  description: "訪問直前に読む 1 ページ：担当者、進行中の案件と次の一手、直近の電話、返事待ちの見積り、定番品、横展開候補、前任者の申し送り。",
+  inputSchema: { customer: z.string() },
+}, async ({ customer }) => { const c = resolveCustomer(customer); return text(visitBrief(db, c.id)); });
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
