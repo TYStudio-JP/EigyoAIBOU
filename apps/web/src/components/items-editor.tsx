@@ -71,7 +71,8 @@ export function ItemsEditor({ customerId, items, onChange, excludeQuoteId, onInq
 
   return (
     <div>
-      <table className="w-full text-sm">
+      <div className="overflow-x-auto -mx-3 px-3 lg:mx-0 lg:px-0">
+      <table className="w-full text-sm min-w-[56rem]">
         <thead className="text-xs text-muted">
           <tr><th className="text-left font-normal py-1 w-8">#</th><th className="text-left font-normal w-[26%]">商品</th><th className="text-right font-normal w-20">数量</th><th className="text-left font-normal w-12 pl-2">単位</th><th className="text-right font-normal w-28">単価</th><th className="text-left font-normal pl-3 w-[20%]">仕入れ（原価）</th><th className="text-right font-normal w-16">粗利</th><th className="text-right font-normal w-24">金額</th><th className="text-left font-normal pl-3">チェック</th><th className="w-8" /></tr>
         </thead>
@@ -125,7 +126,8 @@ export function ItemsEditor({ customerId, items, onChange, excludeQuoteId, onInq
           })}
         </tbody>
       </table>
-      <div className="flex items-center justify-between mt-3">
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
         <Button size="sm" onClick={() => reprice([...items, emptyItem()])}>＋ 明細を追加</Button>
         <div className="flex items-center gap-6 text-sm">
           {busy && <span className="text-xs text-muted">価格を照合中…</span>}

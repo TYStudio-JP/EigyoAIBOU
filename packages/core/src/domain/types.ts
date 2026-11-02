@@ -33,6 +33,7 @@ export interface Customer {
   prefecture: string;
   contact_name: string | null;
   contact_email: string | null;
+  tel: string | null;
   payment_terms: string;
   notes: string;
 }
@@ -148,3 +149,64 @@ export const DEFAULT_SETTINGS: Settings = {
   followup_days_repeat: 7,
   quote_valid_days: 30,
 };
+
+// ---------- 電話メモ ----------
+export type CallDirection = "in" | "out" | "unknown";
+export type CallStatus = "open" | "processed" | "sent" | "closed";
+export const CALL_STATUS_LABEL: Record<CallStatus, string> = { open: "メモ未入力", processed: "処理済", sent: "確認メール送付済", closed: "完了" };
+
+export type CallRequestKind = "product_inquiry" | "price" | "delivery" | "quote_request" | "quantity_change" | "complaint" | "other";
+export const CALL_REQUEST_LABEL: Record<CallRequestKind, string> = {
+  product_inquiry: "商品問い合わせ", price: "価格相談", delivery: "納期相談", quote_request: "見積り依頼",
+  quantity_change: "数量・内容変更", complaint: "クレーム・不具合", other: "その他",
+};
+
+export interface CallRequestResult {
+  status: "done" | "needs_human" | "skipped";
+  headline: string;      // 一行の結論（確認メールにも使う）
+  detail: string;        // 根拠・補足
+  quote_id?: number;
+  quote_no?: string;
+  product_code?: string;
+}
+export interface CallRequest {
+  kind: CallRequestKind;
+  detail: string;                 // 相手の発言の要約
+  product_query: string | null;   // 商品の手がかり
+  qty: number | null;
+  unit: string | null;
+  asked_price: number | null;     // 相手が口にした価格
+  requested_delivery: string | null;
+  quote_no: string | null;        // 既存見積りへの言及
+  items: { product_query: string; qty: number }[]; // 見積り依頼のとき
+  result?: CallRequestResult;
+}
+export interface CallMinutes {
+  summary: string;                // 議事録（3〜5 行）
+  counterpart: string | null;     // 相手の名前・役職
+  requests: CallRequest[];
+  promises: string[];             // こちらが約束したこと
+  rep_todos: string[];            // 営業担当がやること
+  next_contact: string | null;    // 次回連絡の目安
+  mood: "good" | "neutral" | "concerned" | null;
+}
+export interface CallRecord {
+  id: number;
+  customer_id: number | null;
+  tel: string | null;
+  direction: CallDirection;
+  started_at: string;
+  duration_sec: number | null;
+  source: string;
+  memo: string;
+  minutes_json: string | null;
+  mail_subject: string | null;
+  mail_body: string | null;
+  status: CallStatus;
+  created_at: string;
+  updated_at: string;
+}
+export interface CallWithCustomer extends CallRecord {
+  customer: Customer | null;
+  minutes: CallMinutes | null;
+}

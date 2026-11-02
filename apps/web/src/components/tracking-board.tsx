@@ -37,14 +37,14 @@ export function TrackingBoard({ items, aiEnabled }: { items: FollowupItem[]; aiE
               <ul className="divide-y divide-line">
                 {rows.map((f) => (
                   <li key={f.quote.id} className="py-3">
-                    <div className="flex items-start gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-2"><Link href={`/quotes/${f.quote.id}`} className="font-semibold hover:underline">{f.quote.customer_name}</Link><span className="text-muted text-sm truncate">{f.quote.subject}</span><span className="text-xs text-muted num">{f.quote.quote_no}</span></div>
                         <div className="text-xs text-muted mt-0.5">提出 {dateJp(f.quote.submitted_at)}（{f.days_since_submit}日前）／ 最終フォロー {f.quote.last_followup_at ? `${dateJp(f.quote.last_followup_at)}（${f.days_since_last_touch}日前）` : "未実施"} ／ 有効期限 {dateJp(f.quote.valid_until)}</div>
                         <div className="text-sm mt-1">→ {f.suggestion}</div>
                       </div>
-                      <div className="text-right num font-semibold">{yen(f.quote.total)}</div>
-                      <div className="flex flex-col gap-1.5 shrink-0">
+                      <div className="sm:text-right num font-semibold">{yen(f.quote.total)}</div>
+                      <div className="flex sm:flex-col gap-1.5 shrink-0">
                         <Button size="sm" variant="primary" onClick={() => setDraftFor(f)} disabled={!aiEnabled} title={aiEnabled ? "" : "API キー未設定"}>AI でフォロー文面</Button>
                         <Button size="sm" onClick={() => { setNoteFor(noteFor === f.quote.id ? null : f.quote.id); setNote(""); }}>フォローを記録</Button>
                       </div>

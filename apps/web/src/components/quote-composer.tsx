@@ -86,8 +86,8 @@ export function QuoteComposer({ customers, samples, aiEnabled }: { customers: Cu
             </select>
           </div>
           <div className="flex gap-2 justify-end">
-            <Button onClick={startManual}>手入力で作る</Button>
-            <Button variant="primary" busy={busy} onClick={extract} disabled={!text.trim() && !file}>営業AI棒に読ませる</Button>
+            <Button onClick={startManual} className="flex-1 lg:flex-none justify-center">手入力で作る</Button>
+            <Button variant="primary" busy={busy} onClick={extract} disabled={!text.trim() && !file} className="flex-1 lg:flex-none justify-center">営業AI棒に読ませる</Button>
           </div>
         </div>
         {err && !draft && <p className="text-sm text-danger mt-2">{err}</p>}

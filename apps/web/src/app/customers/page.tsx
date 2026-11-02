@@ -13,7 +13,12 @@ export default function CustomersPage() {
     <>
       <PageTitle title="得意先" sub="得意先を開くと、同業他社の購買実績から「横展開できる商品」を提案します。" />
       <Card>
-        <table className="w-full text-sm">
+        <ul className="lg:hidden divide-y divide-line">
+          {customers.map((c) => (
+            <li key={c.id}><Link href={`/customers/${c.id}`} className="flex items-center gap-3 py-3 active:bg-bg"><div className="flex-1 min-w-0"><div className="font-semibold truncate">{c.name}</div><div className="text-xs text-muted">{c.industry}・{c.prefecture}・{c.contact_name}</div></div><span className="text-muted">›</span></Link></li>
+          ))}
+        </ul>
+        <table className="hidden lg:table w-full text-sm">
           <thead className="text-xs text-muted"><tr><th className="text-left font-normal py-1">コード</th><th className="text-left font-normal">得意先</th><th className="text-left font-normal">業種</th><th className="text-left font-normal">担当</th><th className="text-right font-normal">受注品目</th><th className="text-right font-normal">未決着</th><th className="text-left font-normal pl-4">メモ</th></tr></thead>
           <tbody>
             {customers.map((c) => {

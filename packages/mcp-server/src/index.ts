@@ -11,6 +11,7 @@ import {
   addActivity, checkPrice, createQuote, crossSellCandidates, currentSupplierPrices, findCustomer, findProducts, followupQueue,
   getQuote, getQuoteByNo, getSettings, hasApiKey, listActivities, listCustomers, listQuotes, lostReasonStats, openDb, priceHistory,
   proposePrice, ROUTE_LABEL, seedDatabase, setQuoteStatus, STATUS_LABEL, today, extractQuoteRequest, extractQuoteRequestFallback,
+  createCall, executeCallRequests, findCustomerByTel, listCalls, structureCallMemo, composeCallConfirmation, updateCall, CALL_REQUEST_LABEL,
   type LostReason, type NewQuoteItem, type QuoteStatus,
 } from "@eigyo/core";
 
@@ -197,6 +198,36 @@ server.registerTool("lost_reasons", {
   description: "失注理由ごとの件数・金額を返す。",
   inputSchema: {},
 }, async () => text(lostReasonStats(db)));
+
+server.registerTool("log_call", {
+  title: "電話メモを記録して処理",
+  description: "電話の内容（口頭メモ）を記録し、議事録・依頼事項に構造化して、価格回答・納期回答・見積り下書きなどを実行し、得意先宛ての確認メールを下書きする。口頭のミス・漏れを無くすための機能。",
+  inputSchema: {
+    memo: z.string().describe("電話の内容（話し言葉のままで可）"),
+    customer: z.string().optional().describe("得意先コード・社名・電話番号"),
+    direction: z.enum(["in", "out", "unknown"]).optional(),
+  },
+}, async ({ memo, customer, direction }) => {
+  let cust = null;
+  if (customer) cust = findCustomerByTel(db, customer) ?? resolveCustomer(customer);
+  const call = createCall(db, { customer_id: cust?.id ?? null, tel: cust?.tel ?? null, direction: direction ?? "unknown", memo, source: "mcp" });
+  if (!hasApiKey()) return text({ id: call.id, note: "API キー未設定のため記録のみ。Web の電話メモ画面から処理してください。" });
+  const minutes = await structureCallMemo({ memo, customer: cust, recentQuotes: cust ? listQuotes(db, { customerId: cust.id, limit: 6 }) : [], today: today(), started_at: call.started_at });
+  const executed = executeCallRequests(db, call, minutes);
+  const mail = await composeCallConfirmation(call, executed, getSettings(db), today());
+  updateCall(db, call.id, { minutes_json: JSON.stringify(executed), mail_subject: mail.subject, mail_body: mail.body, status: "processed" });
+  return text({
+    call_id: call.id, customer: cust?.name ?? null, summary: executed.summary,
+    requests: executed.requests.map((r) => ({ kind: CALL_REQUEST_LABEL[r.kind], detail: r.detail, result: r.result })),
+    promises: executed.promises, rep_todos: executed.rep_todos, confirmation_mail: mail, url: `http://localhost:3000/calls/${call.id}`,
+  });
+});
+
+server.registerTool("list_calls", {
+  title: "電話メモ一覧",
+  description: "最近の通話記録（メモ未入力・処理済）を返す。",
+  inputSchema: { limit: z.number().int().positive().max(100).optional() },
+}, async ({ limit }) => text(listCalls(db, { limit: limit ?? 20 }).map((c) => ({ id: c.id, customer: c.customer?.short_name ?? c.tel, started_at: c.started_at, status: c.status, summary: c.minutes?.summary.split("\n")[0] ?? c.memo.slice(0, 60), needs_human: c.minutes?.requests.filter((r) => r.result?.status === "needs_human").map((r) => r.result!.headline) ?? [] }))));
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

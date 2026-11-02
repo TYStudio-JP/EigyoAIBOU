@@ -20,9 +20,11 @@
     "test": "cross-env NODE_NO_WARNINGS=1 node --import tsx --test packages/core/src/__tests__/*.test.ts",
     "typecheck": "tsc -p packages/core && tsc -p packages/mcp-server && tsc -p apps/web --noEmit",
     "lint": "npm run lint -w apps/web",
-    "check": "npm run typecheck && npm run lint && npm test"
+    "check": "npm run typecheck && npm run lint && npm test",
+    "tunnel": "node scripts/tunnel.mjs"
   },
   "devDependencies": {
+    "cloudflared": "^0.7.3",
     "cross-env": "^10.1.0",
     "tsx": "^4.19.0",
     "typescript": "^5"

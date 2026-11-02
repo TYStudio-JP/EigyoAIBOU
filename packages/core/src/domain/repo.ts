@@ -77,14 +77,25 @@ export function findCustomer(db: Db, q: string): Customer[] {
     like, like, like, like,
   );
 }
+/** 電話番号で得意先を探す（ハイフン・空白・国番号の違いを吸収）。 */
+export function normalizeTel(tel: string): string {
+  let t = tel.replace(/[^\d+]/g, "");
+  if (t.startsWith("+81")) t = "0" + t.slice(3);
+  return t.replace(/\D/g, "");
+}
+export function findCustomerByTel(db: Db, tel: string): Customer | null {
+  const n = normalizeTel(tel);
+  if (!n) return null;
+  return listCustomers(db).find((c) => c.tel && normalizeTel(c.tel) === n) ?? null;
+}
 export function upsertCustomer(db: Db, c: Omit<Customer, "id">): Customer {
   db.prepare(
-    `INSERT INTO customers(code,name,short_name,industry,prefecture,contact_name,contact_email,payment_terms,notes)
-     VALUES(?,?,?,?,?,?,?,?,?)
+    `INSERT INTO customers(code,name,short_name,industry,prefecture,contact_name,contact_email,tel,payment_terms,notes)
+     VALUES(?,?,?,?,?,?,?,?,?,?)
      ON CONFLICT(code) DO UPDATE SET name=excluded.name, short_name=excluded.short_name, industry=excluded.industry,
        prefecture=excluded.prefecture, contact_name=excluded.contact_name, contact_email=excluded.contact_email,
-       payment_terms=excluded.payment_terms, notes=excluded.notes`,
-  ).run(c.code, c.name, c.short_name, c.industry, c.prefecture, c.contact_name, c.contact_email, c.payment_terms, c.notes);
+       tel=excluded.tel, payment_terms=excluded.payment_terms, notes=excluded.notes`,
+  ).run(c.code, c.name, c.short_name, c.industry, c.prefecture, c.contact_name, c.contact_email, c.tel ?? null, c.payment_terms, c.notes);
   return one<Customer>(db, "SELECT * FROM customers WHERE code=?", c.code)!;
 }
 
@@ -409,6 +420,45 @@ export function dashboardStats(db: Db): { by_status: Record<QuoteStatus, number>
   );
   const closed = by_status.won + by_status.lost;
   return { by_status, recent_won_amount: won?.amt ?? 0, open_amount, win_rate_pct: closed ? (by_status.won / closed) * 100 : 0 };
+}
+
+// ---------- calls（電話メモ） ----------
+import type { CallDirection, CallMinutes, CallRecord, CallStatus, CallWithCustomer } from "./types";
+
+function hydrateCall(db: Db, c: CallRecord): CallWithCustomer {
+  let minutes: CallMinutes | null = null;
+  if (c.minutes_json) { try { minutes = JSON.parse(c.minutes_json) as CallMinutes; } catch { minutes = null; } }
+  return { ...c, customer: c.customer_id ? getCustomer(db, c.customer_id) : null, minutes };
+}
+export function createCall(db: Db, c: { customer_id?: number | null; tel?: string | null; direction?: CallDirection; started_at?: string; duration_sec?: number | null; source?: string; memo?: string }): CallWithCustomer {
+  const now = nowStamp();
+  const res = db.prepare(
+    "INSERT INTO calls(customer_id,tel,direction,started_at,duration_sec,source,memo,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
+  ).run(c.customer_id ?? null, c.tel ?? null, c.direction ?? "unknown", c.started_at ?? now, c.duration_sec ?? null, c.source ?? "manual", c.memo ?? "", "open", now, now);
+  return getCall(db, Number(res.lastInsertRowid))!;
+}
+export function getCall(db: Db, id: number): CallWithCustomer | null {
+  const c = one<CallRecord>(db, "SELECT * FROM calls WHERE id=?", id);
+  return c ? hydrateCall(db, c) : null;
+}
+export function listCalls(db: Db, opts: { status?: CallStatus[]; customerId?: number; limit?: number } = {}): CallWithCustomer[] {
+  const params: (string | number)[] = [];
+  const where: string[] = [];
+  if (opts.status?.length) { where.push(`status IN (${opts.status.map(() => "?").join(",")})`); params.push(...opts.status); }
+  if (opts.customerId) { where.push("customer_id=?"); params.push(opts.customerId); }
+  params.push(opts.limit ?? 50);
+  return all<CallRecord>(db, `SELECT * FROM calls ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY started_at DESC, id DESC LIMIT ?`, ...params).map((c) => hydrateCall(db, c));
+}
+export function updateCall(db: Db, id: number, patch: Partial<Pick<CallRecord, "customer_id" | "tel" | "direction" | "memo" | "minutes_json" | "mail_subject" | "mail_body" | "status" | "duration_sec" | "started_at">>): CallWithCustomer {
+  const keys = Object.keys(patch) as (keyof typeof patch)[];
+  if (keys.length) {
+    const set = keys.map((k) => `${k}=?`).join(", ");
+    db.prepare(`UPDATE calls SET ${set}, updated_at=? WHERE id=?`).run(...keys.map((k) => patch[k] as string | number | null), nowStamp(), id);
+  }
+  return getCall(db, id)!;
+}
+export function deleteCall(db: Db, id: number): void {
+  db.prepare("DELETE FROM calls WHERE id=?").run(id);
 }
 
 export type { Row };
