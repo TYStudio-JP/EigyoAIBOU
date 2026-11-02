@@ -28,7 +28,8 @@ export function seedDatabase(db: Db, opts: SeedOptions = {}): { customers: numbe
   const pick = <T>(arr: T[]): T => arr[Math.floor(rnd() * arr.length)];
   const between = (a: number, b: number) => a + rnd() * (b - a);
 
-  db.exec("DELETE FROM customer_owners; DELETE FROM users; DELETE FROM deal_events; DELETE FROM deals; DELETE FROM end_customers; DELETE FROM contacts; DELETE FROM calls; DELETE FROM activities; DELETE FROM quote_items; DELETE FROM quotes; DELETE FROM supplier_prices; DELETE FROM products; DELETE FROM suppliers; DELETE FROM customers; DELETE FROM settings;");
+  // 外部キーの依存順に消す（子 → 親）。users は customers.owner_user_id から参照されるので最後。
+  db.exec("DELETE FROM customer_owners; DELETE FROM deal_events; DELETE FROM calls; DELETE FROM activities; DELETE FROM quote_items; DELETE FROM quotes; DELETE FROM deals; DELETE FROM end_customers; DELETE FROM contacts; DELETE FROM supplier_prices; DELETE FROM products; DELETE FROM suppliers; DELETE FROM customers; DELETE FROM users; DELETE FROM settings;");
   saveSettings(db, DEFAULT_SETTINGS);
 
   const customers = CUSTOMERS.map((c) => ({ ...upsertCustomer(db, c), discount: c.discount }));
