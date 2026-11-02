@@ -1,0 +1,56 @@
+import { DatabaseSync } from "node:sqlite";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { SCHEMA_SQL } from "./schema";
+
+export type Db = DatabaseSync;
+
+/** リポジトリルート（package.json の name が eigyo-aibou のディレクトリ）を cwd から上に探す。 */
+export function findRepoRoot(start: string = process.cwd()): string {
+  let dir = resolve(start);
+  for (let i = 0; i < 8; i++) {
+    const pkg = join(dir, "package.json");
+    if (existsSync(pkg)) {
+      try {
+        const json = JSON.parse(readFileSync(pkg, "utf8")) as { name?: string };
+        if (json.name === "eigyo-aibou") return dir;
+      } catch {
+        /* ignore */
+      }
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return resolve(start);
+}
+
+/** 既定の DB パス。環境変数 EIGYO_DB_PATH で上書き可能。 */
+export function defaultDbPath(): string {
+  if (process.env.EIGYO_DB_PATH) return resolve(process.env.EIGYO_DB_PATH);
+  return join(findRepoRoot(), "data", "eigyo.db");
+}
+
+let cached: { path: string; db: DatabaseSync } | null = null;
+
+export function openDb(path: string = defaultDbPath()): DatabaseSync {
+  if (cached && cached.path === path && cached.db.isOpen) return cached.db;
+  if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
+  const db = new DatabaseSync(path);
+  if (path !== ":memory:") db.exec("PRAGMA journal_mode = WAL");
+  db.exec("PRAGMA foreign_keys = ON");
+  db.exec(SCHEMA_SQL);
+  cached = { path, db };
+  return db;
+}
+
+export function dbExists(path: string = defaultDbPath()): boolean {
+  return path === ":memory:" ? false : existsSync(path);
+}
+
+export function closeDb(): void {
+  if (cached) {
+    cached.db.close();
+    cached = null;
+  }
+}

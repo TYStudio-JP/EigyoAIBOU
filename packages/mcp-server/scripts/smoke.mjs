@@ -1,0 +1,14 @@
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+const t = new StdioClientTransport({ command: "node", args: ["--import", "tsx", "packages/mcp-server/src/index.ts"], cwd: process.cwd(), env: { ...process.env, EIGYO_DB_PATH: "./data/mcp-test.db" } });
+const c = new Client({ name: "t", version: "0" });
+await c.connect(t);
+const tools = await c.listTools();
+console.log("tools:", tools.tools.map((x) => x.name).join(", "));
+const r = await c.callTool({ name: "propose_price", arguments: { customer: "東海精密", product: "EM-10-4F", qty: 10, unit_price: 6000 } });
+console.log(r.content[0].text.slice(0, 600));
+const q = await c.callTool({ name: "create_quote", arguments: { customer: "C013", subject: "MCPテスト", items: [{ product: "切削油", qty: 4 }, { product: "HK-5L", qty: 20 }] } });
+console.log(q.content[0].text.slice(0, 500));
+const f = await c.callTool({ name: "followup_queue", arguments: {} });
+console.log(f.content[0].text.slice(0, 300));
+await c.close();

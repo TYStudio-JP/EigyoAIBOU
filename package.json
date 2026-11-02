@@ -1,0 +1,30 @@
+{
+  "name": "eigyo-aibou",
+  "private": true,
+  "version": "0.1.0",
+  "description": "営業AI棒（えいぎょうあいぼう）— ルート営業の見積り・追跡・提案を肩代わりする営業アシスタント",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "cross-env NODE_NO_WARNINGS=1 npm run dev -w apps/web",
+    "build": "npm run build -w apps/web",
+    "start": "cross-env NODE_NO_WARNINGS=1 npm run start -w apps/web",
+    "seed": "cross-env NODE_NO_WARNINGS=1 tsx packages/core/src/seed/cli.ts",
+    "mcp": "cross-env NODE_NO_WARNINGS=1 node --import tsx packages/mcp-server/src/index.ts",
+    "mcp:smoke": "cross-env NODE_NO_WARNINGS=1 node packages/mcp-server/scripts/smoke.mjs",
+    "test": "cross-env NODE_NO_WARNINGS=1 node --import tsx --test packages/core/src/__tests__/*.test.ts",
+    "typecheck": "tsc -p packages/core && tsc -p packages/mcp-server && tsc -p apps/web --noEmit",
+    "lint": "npm run lint -w apps/web",
+    "check": "npm run typecheck && npm run lint && npm test"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  }
+}
