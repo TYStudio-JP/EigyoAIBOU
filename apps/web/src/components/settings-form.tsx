@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Settings } from "@eigyo/core/shared";
+import type { Settings, User } from "@eigyo/core/shared";
 import { Button, Card, inputCls, labelCls } from "./ui";
 
-export function SettingsForm({ initial, ai }: { initial: Settings; ai: { enabled: boolean; model: string } }) {
+export function SettingsForm({ initial, ai, users, meId }: { initial: Settings; ai: { enabled: boolean; model: string }; users: User[]; meId: number | null }) {
+  const [newUser, setNewUser] = useState({ name: "", department: "" });
   const router = useRouter();
   const [s, setS] = useState(initial);
   const [msg, setMsg] = useState<string | null>(null);
@@ -43,6 +44,23 @@ export function SettingsForm({ initial, ai }: { initial: Settings; ai: { enabled
           {field("followup_days_first", "提出後、最初のフォローまで（日）", "number")}
           {field("followup_days_repeat", "以降のフォロー間隔（日）", "number")}
           {field("quote_valid_days", "見積り有効期間（日）", "number")}
+        </div>
+      </Card>
+      <Card title="ユーザー（自社の営業担当）">
+        <p className="text-xs text-muted mb-2">今の操作ユーザーを切り替えます（会社導入時はログインに置き換える前提）。得意先の引継ぎは得意先ページから行います。</p>
+        <ul className="divide-y divide-line text-sm">
+          {users.map((u) => (
+            <li key={u.id} className="py-1.5 flex items-center gap-2">
+              <span className={`flex-1 ${u.status === "inactive" ? "text-muted" : ""}`}>{u.name} <span className="text-xs text-muted">{u.department}{u.status === "inactive" ? "・無効" : ""}</span></span>
+              {meId === u.id ? <span className="text-xs text-ok">操作中</span> : <Button size="sm" onClick={async () => { await fetch("/api/users/switch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: u.id }) }); router.refresh(); }}>このユーザーで操作</Button>}
+              <Button size="sm" variant="ghost" onClick={async () => { await fetch("/api/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: u.id, status: u.status === "active" ? "inactive" : "active" }) }); router.refresh(); }}>{u.status === "active" ? "無効にする" : "有効にする"}</Button>
+            </li>
+          ))}
+        </ul>
+        <div className="flex flex-wrap gap-2 mt-3 items-end">
+          <div><label className={labelCls}>氏名</label><input className={inputCls} value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} /></div>
+          <div><label className={labelCls}>部署</label><input className={inputCls} value={newUser.department} onChange={(e) => setNewUser({ ...newUser, department: e.target.value })} /></div>
+          <Button size="sm" disabled={!newUser.name.trim()} onClick={async () => { await fetch("/api/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newUser) }); setNewUser({ name: "", department: "" }); router.refresh(); }}>追加</Button>
         </div>
       </Card>
       <Card title="AI 接続">

@@ -15,7 +15,7 @@ export function extractQuoteRequestFallback(text: string, today: string): Extrac
     items.push({ raw_text: raw, product_query: pn ?? name, part_number: pn, qty: Number(m[2]), unit: m[3] ?? null, is_new_for_customer: /初めて|新規/.test(raw), note: null });
   }
   // 冒頭の名乗り（「みどり食品の高橋です」）や署名から得意先を推定する材料を渡す
-  const customer = lines.filter((l) => !/^件名|御中|ツヤ商事/.test(l) && /です|より|株式会社|有限会社|様$/.test(l)).slice(0, 3).join(" ") || null;
+  const customer = lines.filter((l) => !/^件名|御中|ツヤ商事/.test(l) && /です|より|から|さん|様|株式会社|有限会社/.test(l)).slice(0, 3).join(" ") || null;
   return {
     customer_hint: customer,
     contact_name: null,

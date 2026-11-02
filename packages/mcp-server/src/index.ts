@@ -12,6 +12,7 @@ import {
   getQuote, getQuoteByNo, getSettings, hasApiKey, listActivities, listCustomers, listQuotes, lostReasonStats, openDb, priceHistory,
   proposePrice, ROUTE_LABEL, seedDatabase, setQuoteStatus, STATUS_LABEL, today, extractQuoteRequest, extractQuoteRequestFallback,
   createCall, executeCallRequests, findCustomerByTel, listCalls, structureCallMemo, composeCallConfirmation, updateCall, CALL_REQUEST_LABEL,
+  adjudicateDealLink, attachCallToDeal, attachQuoteToDeal, dealTimeline, getDeal, handoverCustomer, handoverFacts, listContacts, listDeals, listUsers, refreshDealSummary, DEAL_STATUS_LABEL, CONTACT_STATUS_LABEL,
   type LostReason, type NewQuoteItem, type QuoteStatus,
 } from "@eigyo/core";
 
@@ -127,7 +128,9 @@ server.registerTool("create_quote", {
     return { product_id: p.id, description: `${p.name}（${p.part_number}）`, qty: it.qty, unit: p.unit, unit_price: price, cost: prop.best_cost ?? 0, supplier_id: prop.best_supplier_id, remarks: it.remarks ?? "" };
   });
   const q = createQuote(db, { customer_id: c.id, subject, items: lines, requested_delivery: requested_delivery ?? null, notes: notes ?? "", source_type: "mcp", source_text: source_text ?? "" });
-  return text({ quote_no: q.quote_no, id: q.id, customer: c.name, total: q.total, total_cost: q.total_cost, margin_pct: Math.round(q.margin_pct * 10) / 10, valid_until: q.valid_until, promised_delivery: q.promised_delivery, url: `http://localhost:3000/quotes/${q.id}`, items: report });
+  const link = await attachQuoteToDeal(db, q.id, { adjudicate: hasApiKey() ? adjudicateDealLink : undefined });
+  await refreshDealSummary(db, link.deal.id, { useAi: false });
+  return text({ quote_no: q.quote_no, id: q.id, deal: { id: link.deal.id, title: link.deal.title, created: link.created, confidence: link.confidence, reason: link.reason }, customer: c.name, total: q.total, total_cost: q.total_cost, margin_pct: Math.round(q.margin_pct * 10) / 10, valid_until: q.valid_until, promised_delivery: q.promised_delivery, url: `http://localhost:3000/quotes/${q.id}`, items: report });
 });
 
 server.registerTool("get_quote", {
@@ -216,8 +219,10 @@ server.registerTool("log_call", {
   const executed = executeCallRequests(db, call, minutes);
   const mail = await composeCallConfirmation(call, executed, getSettings(db), today());
   updateCall(db, call.id, { minutes_json: JSON.stringify(executed), mail_subject: mail.subject, mail_body: mail.body, status: "processed" });
+  const link = await attachCallToDeal(db, call.id, { adjudicate: adjudicateDealLink });
+  if (link) await refreshDealSummary(db, link.deal.id);
   return text({
-    call_id: call.id, customer: cust?.name ?? null, summary: executed.summary,
+    call_id: call.id, customer: cust?.name ?? null, deal: link ? { id: link.deal.id, title: link.deal.title, created: link.created } : null, summary: executed.summary,
     requests: executed.requests.map((r) => ({ kind: CALL_REQUEST_LABEL[r.kind], detail: r.detail, result: r.result })),
     promises: executed.promises, rep_todos: executed.rep_todos, confirmation_mail: mail, url: `http://localhost:3000/calls/${call.id}`,
   });
@@ -228,6 +233,50 @@ server.registerTool("list_calls", {
   description: "最近の通話記録（メモ未入力・処理済）を返す。",
   inputSchema: { limit: z.number().int().positive().max(100).optional() },
 }, async ({ limit }) => text(listCalls(db, { limit: limit ?? 20 }).map((c) => ({ id: c.id, customer: c.customer?.short_name ?? c.tel, started_at: c.started_at, status: c.status, summary: c.minutes?.summary.split("\n")[0] ?? c.memo.slice(0, 60), needs_human: c.minutes?.requests.filter((r) => r.result?.status === "needs_human").map((r) => r.result!.headline) ?? [] }))));
+
+server.registerTool("list_deals", {
+  title: "案件一覧",
+  description: "案件（得意先×ひとつの話）を一覧する。状態・次の一手・期限・金額付き。得意先や担当者で絞り込める。",
+  inputSchema: { customer: z.string().optional(), open_only: z.boolean().optional().describe("進行中のみ（既定 true）"), limit: z.number().int().positive().max(100).optional() },
+}, async ({ customer, open_only, limit }) => {
+  const c = customer ? resolveCustomer(customer) : null;
+  return text(listDeals(db, { customerId: c?.id, openOnly: open_only ?? true, limit: limit ?? 30 }).map((d) => ({ id: d.id, customer: d.customer.short_name, contact: d.contact?.name ?? null, end_customer: d.end_customer?.name ?? null, title: d.title, status: DEAL_STATUS_LABEL[d.status], amount: Math.round(d.amount), next_action: d.next_action, next_action_due: d.next_action_due, last_activity: d.last_activity_at.slice(0, 10), summary: d.summary })));
+});
+
+server.registerTool("get_deal", {
+  title: "案件の詳細",
+  description: "案件の経緯（3 行要約と詳細）、次の一手、時系列（電話・見積り・フォロー・メール・引継ぎ）を返す。",
+  inputSchema: { deal_id: z.number().int() },
+}, async ({ deal_id }) => {
+  const d = getDeal(db, deal_id);
+  if (!d) throw new Error(`案件 ${deal_id} が見つかりません`);
+  return text({ ...d, status_label: DEAL_STATUS_LABEL[d.status], timeline: dealTimeline(db, deal_id).map((t) => `${t.at.slice(0, 16)} [${t.title}] ${t.body}`) });
+});
+
+server.registerTool("refresh_deal", {
+  title: "案件の要約を更新",
+  description: "案件の「ここまでの経緯と今の状況」「次の一手」を時系列から書き直す。",
+  inputSchema: { deal_id: z.number().int() },
+}, async ({ deal_id }) => text(await refreshDealSummary(db, deal_id)));
+
+server.registerTool("list_contacts", {
+  title: "得意先の担当者一覧",
+  description: "得意先の担当者（在籍・異動・退職）と連絡先を返す。",
+  inputSchema: { customer: z.string() },
+}, async ({ customer }) => { const c = resolveCustomer(customer); return text(listContacts(db, c.id, { includeInactive: true }).map((k) => ({ id: k.id, name: k.name, department: k.department, title: k.title, status: CONTACT_STATUS_LABEL[k.status], tel: k.tel, mobile: k.mobile, email: k.email, notes: k.notes }))); });
+
+server.registerTool("handover_customer", {
+  title: "得意先の担当を引き継ぐ",
+  description: "得意先の担当を別の自社ユーザーへ引き継ぐ。引継ぎ書を保存し、進行中の案件に『ここまでは前回の担当者〇〇』を記録する。dry_run=true なら引継ぎ書の内容だけ返す。",
+  inputSchema: { customer: z.string(), to_user: z.string().optional().describe("引継ぎ先ユーザー名"), note: z.string().optional(), dry_run: z.boolean().optional() },
+}, async ({ customer, to_user, note, dry_run }) => {
+  const c = resolveCustomer(customer);
+  if (dry_run || !to_user) return text(handoverFacts(db, c.id));
+  const u = listUsers(db).find((x) => x.name.replace(/\s/g, "").includes(to_user.replace(/\s/g, "")));
+  if (!u) throw new Error(`ユーザー「${to_user}」が見つかりません: ${listUsers(db).map((x) => x.name).join(" / ")}`);
+  const rec = handoverCustomer(db, c.id, u.id, { note });
+  return text({ ok: true, customer: c.name, to: u.name, handed_at: rec.handed_at, handover_doc_chars: rec.handover_doc.length });
+});
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

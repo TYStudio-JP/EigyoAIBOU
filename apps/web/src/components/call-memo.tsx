@@ -1,16 +1,18 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CallWithCustomer, Customer } from "@eigyo/core/shared";
+import type { CallWithCustomer, Contact, Customer } from "@eigyo/core/shared";
 import { VoiceInput } from "./voice-input";
 import { Button, inputCls, labelCls } from "./ui";
 
 const EXAMPLE = "東海精密の佐藤さんから。エンドミルφ10の単価、競合が7,000円出してきたからなんとかならないかって。あと切削油18Lを8缶、来週水曜までに。防錆スプレー24本入りの在庫も聞かれた。来週火曜に訪問の約束。";
 
 /** 電話メモ入力（新規 or 既存の通話に追記）。保存して AI 処理へ。 */
-export function CallMemo({ call, customers, aiEnabled, autostart }: { call: CallWithCustomer | null; customers: Customer[]; aiEnabled: boolean; autostart?: boolean }) {
+export function CallMemo({ call, customers, contacts, aiEnabled, autostart }: { call: CallWithCustomer | null; customers: Customer[]; contacts: Contact[]; aiEnabled: boolean; autostart?: boolean }) {
   const router = useRouter();
   const [customerId, setCustomerId] = useState<number | "">(call?.customer_id ?? "");
+  const [contactId, setContactId] = useState<number | "">(call?.contact_id ?? "");
+  const myContacts = contacts.filter((c) => c.customer_id === customerId);
   const [q, setQ] = useState("");
   const [direction, setDirection] = useState<"in" | "out" | "unknown">(call?.direction ?? "in");
   const [memo, setMemo] = useState(call?.memo ?? "");
@@ -20,10 +22,10 @@ export function CallMemo({ call, customers, aiEnabled, autostart }: { call: Call
 
   const ensureCall = async (): Promise<number> => {
     if (call) {
-      await fetch(`/api/calls/${call.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ memo, customer_id: customerId || null, direction }) });
+      await fetch(`/api/calls/${call.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ memo, customer_id: customerId || null, contact_id: contactId || null, direction }) });
       return call.id;
     }
-    const r = await fetch("/api/calls", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ memo, customer_id: customerId || null, direction, source: "manual" }) });
+    const r = await fetch("/api/calls", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ memo, customer_id: customerId || null, contact_id: contactId || null, direction, source: "manual" }) });
     const j = await r.json();
     if (!r.ok) throw new Error(j.error);
     return j.id;
@@ -51,11 +53,18 @@ export function CallMemo({ call, customers, aiEnabled, autostart }: { call: Call
           <label className={labelCls}>得意先 {call?.tel && <span className="text-muted">（着信番号 {call.tel}{call.customer ? "・自動判定" : "・未登録の番号"}）</span>}</label>
           <div className="flex gap-2">
             <input className={`${inputCls} py-3 text-base`} placeholder="社名・担当者で絞り込み" value={q} onChange={(e) => setQ(e.target.value)} />
-            <select className={`${inputCls} py-3 text-base ${!customerId ? "border-warn" : ""}`} value={customerId} onChange={(e) => setCustomerId(e.target.value ? Number(e.target.value) : "")}>
+            <select className={`${inputCls} py-3 text-base ${!customerId ? "border-warn" : ""}`} value={customerId} onChange={(e) => { setCustomerId(e.target.value ? Number(e.target.value) : ""); setContactId(""); }}>
               <option value="">— 得意先を選ぶ —</option>
-              {filtered.map((c) => <option key={c.id} value={c.id}>{c.short_name}{c.contact_name ? `（${c.contact_name}）` : ""}</option>)}
+              {filtered.map((c) => <option key={c.id} value={c.id}>{c.short_name}</option>)}
             </select>
           </div>
+          {customerId && myContacts.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <span className="text-xs text-muted self-center">相手:</span>
+              {myContacts.map((c) => <button key={c.id} type="button" onClick={() => setContactId(contactId === c.id ? "" : c.id)} className={`rounded-full border px-3 py-1 text-sm ${contactId === c.id ? "bg-brand text-brand-ink border-brand" : "border-line bg-surface"}`}>{c.name}</button>)}
+              <span className="text-[11px] text-muted self-center">（未選択でも名乗りから自動判定）</span>
+            </div>
+          )}
         </div>
         <div>
           <label className={labelCls}>方向</label>

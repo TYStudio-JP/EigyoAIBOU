@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { SCHEMA_SQL } from "./schema";
+import { INDEX_SQL, SCHEMA_SQL } from "./schema";
 
 export type Db = DatabaseSync;
 
@@ -41,14 +41,22 @@ export function openDb(path: string = defaultDbPath()): DatabaseSync {
   db.exec("PRAGMA foreign_keys = ON");
   db.exec(SCHEMA_SQL);
   migrate(db);
+  db.exec(INDEX_SQL);
   cached = { path, db };
   return db;
 }
 
 /** 既存 DB への後方互換マイグレーション（列追加のみ）。 */
 function migrate(db: DatabaseSync): void {
-  const cols = (db.prepare("PRAGMA table_info(customers)").all() as { name: string }[]).map((c) => c.name);
-  if (!cols.includes("tel")) db.exec("ALTER TABLE customers ADD COLUMN tel TEXT");
+  const cols = (table: string) => (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((c) => c.name);
+  const add = (table: string, col: string, ddl: string) => { if (!cols(table).includes(col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`); };
+  add("customers", "tel", "TEXT");
+  add("customers", "kind", "TEXT NOT NULL DEFAULT 'end_user'");
+  add("customers", "owner_user_id", "INTEGER REFERENCES users(id)");
+  add("quotes", "contact_id", "INTEGER REFERENCES contacts(id)");
+  add("quotes", "deal_id", "INTEGER REFERENCES deals(id)");
+  add("calls", "contact_id", "INTEGER REFERENCES contacts(id)");
+  add("calls", "deal_id", "INTEGER REFERENCES deals(id)");
 }
 
 export function dbExists(path: string = defaultDbPath()): boolean {
