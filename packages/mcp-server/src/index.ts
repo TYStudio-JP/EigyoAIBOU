@@ -7,6 +7,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import {
   addActivity, checkPrice, createQuote, crossSellCandidates, currentSupplierPrices, findCustomer, findProducts, followupQueue,
   getQuote, getQuoteByNo, getSettings, hasApiKey, listActivities, listCustomers, listQuotes, lostReasonStats, openDb, priceHistory,
@@ -14,8 +16,12 @@ import {
   createCall, executeCallRequests, findCustomerByTel, listCalls, structureCallMemo, composeCallConfirmation, updateCall, CALL_REQUEST_LABEL,
   adjudicateDealLink, attachCallToDeal, attachQuoteToDeal, dealTimeline, getDeal, handoverCustomer, handoverFacts, listContacts, listDeals, listUsers, refreshDealSummary, DEAL_STATUS_LABEL, CONTACT_STATUS_LABEL,
   buildKeijo, deliveryWaitingList, recordSupplierDelivery, deliveryNotice, priceImpact, reportFacts, reportDraft, visitBrief, listSuppliers, researchWeb,
-  type LostReason, type NewQuoteItem, type QuoteStatus,
+  findRepoRoot, type LostReason, type NewQuoteItem, type QuoteStatus,
 } from "@eigyo/core";
+
+// リポジトリ直下の .env（ANTHROPIC_API_KEY など）を読む。既に設定済みの環境変数は上書きしない。
+const rootEnv = join(findRepoRoot(), ".env");
+if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
 const db = openDb();
 if (listCustomers(db).length === 0) seedDatabase(db);
