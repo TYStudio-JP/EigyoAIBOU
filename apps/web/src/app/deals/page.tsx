@@ -21,7 +21,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
   const users = listUsers(d, { includeInactive: true });
   return (
     <>
-      <PageTitle title="案件" sub="得意先 × ひとつの話。状態は見積りと電話から自動で決まり、経緯は営業AI棒が要約します。" />
+      <PageTitle title="案件" />
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <Link href={`/deals?scope=mine${status.length ? "&status=" + status.join(",") : ""}`} className={`text-xs rounded-full px-3 py-1 border ${scope === "mine" ? "bg-brand text-brand-ink border-brand" : "border-line bg-surface"}`}>自分の担当</Link>
         <Link href={`/deals?scope=all${status.length ? "&status=" + status.join(",") : ""}`} className={`text-xs rounded-full px-3 py-1 border ${scope === "all" ? "bg-brand text-brand-ink border-brand" : "border-line bg-surface"}`}>全員</Link>

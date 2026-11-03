@@ -45,13 +45,13 @@ export function TrackingBoard({ items, aiEnabled }: { items: FollowupItem[]; aiE
                       </div>
                       <div className="sm:text-right num font-semibold">{yen(f.quote.total)}</div>
                       <div className="flex sm:flex-col gap-1.5 shrink-0">
-                        <Button size="sm" variant="primary" onClick={() => setDraftFor(f)} disabled={!aiEnabled} title={aiEnabled ? "" : "API キー未設定"}>AI でフォロー文面</Button>
+                        <Button size="sm" variant="primary" onClick={() => setDraftFor(f)} disabled={!aiEnabled} title={aiEnabled ? "" : "設定で AI を接続すると使えます"}>フォロー文面を作る</Button>
                         <Button size="sm" onClick={() => { setNoteFor(noteFor === f.quote.id ? null : f.quote.id); setNote(""); }}>フォローを記録</Button>
                       </div>
                     </div>
                     {noteFor === f.quote.id && (
                       <div className="mt-2 flex gap-2">
-                        <input autoFocus className={inputCls} placeholder="例）電話で確認。購買で相見積り中、来週回答。" value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => e.key === "Enter" && record(f.quote.id)} />
+                        <input autoFocus className={inputCls} placeholder="フォローの内容" value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => e.key === "Enter" && record(f.quote.id)} />
                         <Button size="sm" variant="primary" busy={busy} onClick={() => record(f.quote.id)}>記録</Button>
                       </div>
                     )}

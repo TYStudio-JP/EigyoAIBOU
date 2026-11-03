@@ -37,12 +37,12 @@ export function HandoverPanel({ customerId, owner, users, history, aiEnabled, me
       )}
       {open && (
         <Modal title="担当の引継ぎ" onClose={() => setOpen(false)}>
-          <p className="text-sm text-muted mb-3">引継ぎを実行すると、進行中の各案件の経緯に「ここまでは前回の担当者 {owner?.name ?? "（未設定）"}」が記録され、引継ぎ書が保存されます。前任者の画面には「過去の担当先」として残ります。</p>
+          <p className="text-sm text-muted mb-3">現在の担当: {owner?.name ?? "未設定"}</p>
           <label className={labelCls}>引継ぎ先</label>
           <select className={`${inputCls} py-2.5`} value={to} onChange={(e) => setTo(e.target.value ? Number(e.target.value) : "")}><option value="">— 選択 —</option>{users.filter((u) => u.status === "active" && u.id !== owner?.id).map((u) => <option key={u.id} value={u.id}>{u.name}（{u.department}）</option>)}</select>
-          <label className={`${labelCls} mt-3`}>申し送り（任意）</label>
-          <textarea className={`${inputCls} h-20`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="例）転勤のため。年間契約の更新は1月。価格交渉は必ず相見積り。" />
-          <label className="flex items-center gap-2 text-sm mt-3"><input type="checkbox" checked={useAi} disabled={!aiEnabled} onChange={(e) => setUseAi(e.target.checked)} />引継ぎ書を AI で読みやすく整える</label>
+          <label className={`${labelCls} mt-3`}>申し送り</label>
+          <textarea className={`${inputCls} h-20`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="後任への申し送り" />
+          <label className="flex items-center gap-2 text-sm mt-3"><input type="checkbox" checked={useAi} disabled={!aiEnabled} onChange={(e) => setUseAi(e.target.checked)} />引継ぎ書を清書する</label>
           {err && <p className="text-sm text-danger mt-2">{err}</p>}
           <div className="flex justify-end gap-2 mt-4"><Button onClick={() => setOpen(false)}>やめる</Button><Button variant="primary" busy={busy} onClick={run} disabled={!to}>引継ぎを実行</Button></div>
         </Modal>

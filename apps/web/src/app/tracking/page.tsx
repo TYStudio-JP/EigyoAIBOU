@@ -10,7 +10,7 @@ export default function TrackingPage() {
   const s = getSettings(d);
   return (
     <>
-      <PageTitle title="追跡ボード — あの見積り、どうなった？" sub={`提出から ${s.followup_days_first} 日、以降 ${s.followup_days_repeat} 日ごとにフォローを促します（設定で変更可）。受注・失注の確定は見積り詳細から。`} />
+      <PageTitle title="追跡ボード" sub={`提出から ${s.followup_days_first} 日、以降 ${s.followup_days_repeat} 日ごと`} />
       <TrackingBoard items={followupQueue(d)} aiEnabled={hasApiKey()} />
     </>
   );

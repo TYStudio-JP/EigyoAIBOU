@@ -53,7 +53,7 @@ export function CallDetail({ call, customers, contacts, aiEnabled, fresh, deal, 
             )}
           </div>
         )}
-        {fresh && !m && <div className="mt-2 rounded-md bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-900">通話を検知しました。忘れないうちに要点を話してください。</div>}
+        {fresh && !m && <div className="mt-2 rounded-md bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-900">通話が終わりました。要点を記録してください。</div>}
       </div>
 
       {(editMemo || !m) && (
@@ -73,7 +73,7 @@ export function CallDetail({ call, customers, contacts, aiEnabled, fresh, deal, 
             </div>
           </Card>
 
-          <Card title={`依頼事項と営業AI棒の処理結果（${m.requests.length} 件）`}>
+          <Card title={`依頼事項（${m.requests.length}）`}>
             {m.requests.length === 0 ? <p className="text-sm text-muted">依頼事項はありませんでした。</p> : (
               <ul className="space-y-3">
                 {m.requests.map((r, i) => (
@@ -102,9 +102,9 @@ export function CallDetail({ call, customers, contacts, aiEnabled, fresh, deal, 
             )}
           </Card>
 
-          <Card title="確認メール（お電話の件、以下の通り承りました）" action={call.status === "sent" ? <span className="text-xs text-ok font-semibold">送付済</span> : undefined}>
+          <Card title="確認メール" action={call.status === "sent" ? <span className="text-xs text-ok font-semibold">送付済</span> : undefined}>
             <div className="space-y-2">
-              <div className="text-xs text-muted">宛先: {to || "（得意先のメールアドレス未登録）"}</div>
+              <div className="text-xs text-muted">宛先: {to || "未登録"}</div>
               <input className={`${inputCls} py-2.5 text-base`} value={subject} onChange={(e) => setSubject(e.target.value)} />
               <textarea className={`${inputCls} text-base leading-relaxed`} rows={12} value={body} onChange={(e) => setBody(e.target.value)} />
               <div className="flex flex-col sm:flex-row gap-2">

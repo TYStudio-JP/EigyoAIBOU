@@ -27,7 +27,7 @@ export function FollowupModal({ quoteId, quoteNo, onClose, onRecorded }: { quote
   return (
     <Modal title={`フォローアップ文面 — ${quoteNo}`} onClose={onClose} wide>
       {err && <p className="text-sm text-danger">{err}</p>}
-      {!draft && !err && <p className="text-sm text-muted">営業AI棒が経緯を読んで文面を作っています…</p>}
+      {!draft && !err && <p className="text-sm text-muted">作成中…</p>}
       {draft && (
         <div className="grid md:grid-cols-5 gap-5 text-sm">
           <div className="md:col-span-3 space-y-2">

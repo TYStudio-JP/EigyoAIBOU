@@ -22,11 +22,9 @@ export default async function Dashboard() {
   const calls = listCalls(d, { limit: 50 }).filter((c) => c.status === "open" || (c.status === "processed" && c.minutes?.requests.some((r) => r.result?.status === "needs_human")));
   return (
     <>
-      <PageTitle title={`今日の営業AI棒${me ? `　${me.name}` : ""}`} sub="商談・訪問・電話に時間を使えるよう、それ以外を片付けます。" action={<div className="hidden lg:flex gap-2"><LinkButton href="/calls/new">☎ 電話メモ</LinkButton><LinkButton href="/quotes/new" variant="primary">＋ 見積りを作る</LinkButton></div>} />
+      <PageTitle title="今日" sub={me ? `${me.name}（${me.department}）` : undefined} action={<div className="hidden lg:flex gap-2"><LinkButton href="/calls/new">☎ 電話メモ</LinkButton><LinkButton href="/quotes/new" variant="primary">＋ 見積りを作る</LinkButton></div>} />
       {!ai && (
-        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
-          ANTHROPIC_API_KEY が未設定のため AI 機能（依頼文の読み取り・文面作成・レビュー）は簡易モードです。<code className="mx-1">.env</code> にキーを設定して再起動してください。
-        </div>
+        <div className="mb-4 rounded-md border border-line bg-surface px-4 py-2 text-xs text-muted flex items-center justify-between"><span>AI 機能は未接続です</span><Link href="/settings" className="text-brand hover:underline">設定で接続</Link></div>
       )}
       <div className="lg:hidden grid grid-cols-4 gap-2 mb-4 text-center text-xs">
         {[["/calls/new", "☎", "電話メモ"], ["/quotes/new", "✎", "見積り"], ["/report", "✉", "日報"], ["/delivery", "⏱", "納期"]].map(([h, i, l]) => <Link key={h} href={h} className="rounded-lg bg-surface border border-line py-2.5"><div className="text-xl">{i}</div>{l}</Link>)}

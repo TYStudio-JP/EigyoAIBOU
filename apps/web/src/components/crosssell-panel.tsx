@@ -21,10 +21,10 @@ export function CrossSellPanel({ result, aiEnabled }: { result: CrossSellResult;
   };
   return (
     <div className="space-y-4">
-      <Card title={`横展開の候補 — 同業（${result.customer.industry}）で売れていて、${result.customer.short_name}が未購入の商品`} action={
-        <Button size="sm" variant="primary" busy={busy} onClick={run} disabled={!aiEnabled || result.candidates.length === 0}>AI で提案トークとメールを作る</Button>
+      <Card title="横展開の候補" action={
+        <Button size="sm" variant="primary" busy={busy} onClick={run} disabled={!aiEnabled || result.candidates.length === 0} title={aiEnabled ? "" : "設定で AI を接続すると使えます"}>提案トークとメールを作る</Button>
       }>
-        {result.candidates.length === 0 ? <Empty>候補がありません（同業の得意先が少ないか、既に主要商品を購入済み）</Empty> : (
+        {result.candidates.length === 0 ? <Empty>候補なし</Empty> : (
           <div className="overflow-x-auto"><table className="w-full text-sm min-w-[40rem]">
             <thead className="text-xs text-muted"><tr><th className="text-left font-normal py-1">商品</th><th className="text-left font-normal">根拠（同業の実績）</th><th className="text-right font-normal">参考売価</th><th className="text-right font-normal">最安原価</th><th className="text-right font-normal">スコア</th></tr></thead>
             <tbody>

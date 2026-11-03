@@ -52,10 +52,10 @@ export function VoiceInput({ value, onChange, placeholder, rows = 7 }: { value: 
         {supported ? (
           <button type="button" onClick={listening ? stop : start}
             className={`flex-1 lg:flex-none inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-base font-semibold transition ${listening ? "bg-danger text-white animate-pulse" : "bg-brand text-brand-ink"}`}>
-            {listening ? "■ 停止（聞き取り中…）" : "🎤 話して記録する"}
+            {listening ? "■ 停止" : "🎤 話す"}
           </button>
         ) : supported === false ? (
-          <span className="text-xs text-muted">このブラウザは音声認識に未対応です。キーボードのマイクボタン（音声入力）で下の欄に話してください。iPhone は Safari で開くと使えます。</span>
+          <span className="text-xs text-muted">キーボードのマイクから音声入力できます</span>
         ) : null}
       </div>
       <textarea

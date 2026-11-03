@@ -28,7 +28,7 @@ export function ContactForm({ customers, customerId, contact, aiEnabled }: { cus
         ...prev, name: c.name ?? prev.name, department: c.department ?? prev.department, title: c.title ?? prev.title, tel: c.tel ?? prev.tel, mobile: c.mobile ?? prev.mobile, email: c.email ?? prev.email,
         notes: [prev.notes, c.notes].filter(Boolean).join("\n"), customer_id: prev.customer_id || (j.customer_candidates[0]?.id ?? ""),
       }));
-      setCardNote(j.customer_candidates.length ? `名刺を読み取りました。得意先は「${j.customer_candidates[0].name}」と判定（違えば選び直してください）` : `名刺を読み取りました。会社「${c.company ?? "不明"}」は未登録です。得意先を選んでください（マスタ登録はデスクトップから）`);
+      setCardNote(j.customer_candidates.length ? `得意先: ${j.customer_candidates[0].name}` : `「${c.company ?? "会社名不明"}」は未登録の会社です。得意先を選んでください`);
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(null); }
   };
   const save = async () => {
@@ -46,9 +46,9 @@ export function ContactForm({ customers, customerId, contact, aiEnabled }: { cus
     <Card title={contact ? "担当者を編集" : "担当者を追加"}>
       {!contact && (
         <div className="mb-4 rounded-lg border border-dashed border-brand/40 bg-brand/5 p-3">
-          <label className="block text-sm font-semibold mb-1">📷 名刺を撮って登録</label>
+          <label className="block text-sm font-semibold mb-1">📷 名刺から登録</label>
           <input type="file" accept="image/*" capture="environment" className="text-sm" disabled={!aiEnabled || busy === "card"} onChange={(e) => e.target.files?.[0] && readCard(e.target.files[0])} />
-          <div className="text-xs text-muted mt-1">{aiEnabled ? (busy === "card" ? "読み取り中…" : "撮影するか画像を選ぶと、氏名・部署・役職・電話・メールが埋まります。") : "API キーを設定すると名刺の読み取りが使えます。"}</div>
+          <div className="text-xs text-muted mt-1">{aiEnabled ? (busy === "card" ? "読み取り中…" : "") : "設定で AI を接続すると使えます"}</div>
           {cardNote && <div className="text-xs text-ok mt-1">{cardNote}</div>}
         </div>
       )}
@@ -61,7 +61,7 @@ export function ContactForm({ customers, customerId, contact, aiEnabled }: { cus
         <div><label className={labelCls}>電話</label><input className={`${inputCls} py-2.5`} value={f.tel} onChange={(e) => set("tel", e.target.value)} inputMode="tel" /></div>
         <div><label className={labelCls}>携帯</label><input className={`${inputCls} py-2.5`} value={f.mobile} onChange={(e) => set("mobile", e.target.value)} inputMode="tel" /></div>
         <div className="lg:col-span-2"><label className={labelCls}>メール</label><input className={`${inputCls} py-2.5`} value={f.email} onChange={(e) => set("email", e.target.value)} inputMode="email" /></div>
-        <div className="lg:col-span-2"><label className={labelCls}>メモ（人となり・注意点・担当範囲。引継ぎ書に載ります）</label><textarea className={`${inputCls} h-20`} value={f.notes} onChange={(e) => set("notes", e.target.value)} /></div>
+        <div className="lg:col-span-2"><label className={labelCls}>メモ</label><textarea className={`${inputCls} h-20`} value={f.notes} onChange={(e) => set("notes", e.target.value)} /></div>
       </div>
       {err && <p className="text-sm text-danger mt-2">{err}</p>}
       <div className="flex justify-end mt-4"><Button variant="primary" busy={busy === "save"} onClick={save} className="py-3 px-6">保存</Button></div>

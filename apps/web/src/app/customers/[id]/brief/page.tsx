@@ -10,5 +10,5 @@ export default async function BriefPage({ params }: { params: Promise<{ id: stri
   const d = db();
   const c = getCustomer(d, Number(id));
   if (!c) notFound();
-  return (<><PageTitle title={`訪問前ブリーフ — ${c.short_name}`} sub={<>{c.industry}・{c.prefecture}・{c.notes}　<Link href={`/customers/${c.id}`} className="text-brand hover:underline">得意先ページ</Link></>} /><BriefView brief={visitBrief(d, c.id)} aiEnabled={hasApiKey()} /></>);
+  return (<><PageTitle title={`訪問前 — ${c.short_name}`} sub={<>{c.industry}・{c.prefecture}・{c.notes}　<Link href={`/customers/${c.id}`} className="text-brand hover:underline">得意先ページ</Link></>} /><BriefView brief={visitBrief(d, c.id)} aiEnabled={hasApiKey()} /></>);
 }

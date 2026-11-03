@@ -16,7 +16,7 @@ export function BriefView({ brief, aiEnabled }: { brief: VisitBrief; aiEnabled: 
   };
   return (
     <div className="space-y-3">
-      <Card title="今日話すこと" action={<Button size="sm" variant="primary" busy={busy} onClick={run} disabled={!aiEnabled}>AI で 30 秒版にする</Button>}>
+      <Card title="今日話すこと" action={<Button size="sm" variant="primary" busy={busy} onClick={run} disabled={!aiEnabled} title={aiEnabled ? "" : "設定で AI を接続すると使えます"}>要点にまとめる</Button>}>
         {ai ? (
           <div className="text-sm space-y-2">
             <div className="font-semibold">{ai.headline}</div>

@@ -25,7 +25,7 @@ export function InquiryModal({ item, requestedDelivery, onClose }: { item: Draft
     <Modal title={`仕入れ先への問い合わせ下書き — ${sup?.supplier_name ?? ""}`} onClose={onClose}>
       <label className={labelCls}>確認したいこと</label>
       <textarea className={`${inputCls} h-20`} value={question} onChange={(e) => setQuestion(e.target.value)} />
-      <div className="mt-3 flex gap-2"><Button variant="primary" busy={busy} onClick={run}>営業AI棒に下書きさせる</Button></div>
+      <div className="mt-3 flex gap-2"><Button variant="primary" busy={busy} onClick={run}>下書きを作る</Button></div>
       {err && <p className="text-sm text-danger mt-2">{err}</p>}
       {draft && (
         <div className="mt-4 space-y-3 text-sm">

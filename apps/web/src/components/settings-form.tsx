@@ -47,7 +47,7 @@ export function SettingsForm({ initial, ai, users, meId }: { initial: Settings; 
         </div>
       </Card>
       <Card title="ユーザー（自社の営業担当）">
-        <p className="text-xs text-muted mb-2">今の操作ユーザーを切り替えます（会社導入時はログインに置き換える前提）。得意先の引継ぎは得意先ページから行います。</p>
+        
         <ul className="divide-y divide-line text-sm">
           {users.map((u) => (
             <li key={u.id} className="py-1.5 flex items-center gap-2">
@@ -63,9 +63,9 @@ export function SettingsForm({ initial, ai, users, meId }: { initial: Settings; 
           <Button size="sm" disabled={!newUser.name.trim()} onClick={async () => { await fetch("/api/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newUser) }); setNewUser({ name: "", department: "" }); router.refresh(); }}>追加</Button>
         </div>
       </Card>
-      <Card title="AI 接続">
+      <Card title="AI">
         <p className="text-sm">状態: {ai.enabled ? <span className="text-ok font-semibold">接続済み</span> : <span className="text-warn font-semibold">未設定</span>}　モデル: <code>{ai.model}</code></p>
-        <p className="text-xs text-muted mt-1">リポジトリ直下の <code>.env</code> に <code>ANTHROPIC_API_KEY=sk-ant-...</code> を書いて再起動してください。モデルは <code>EIGYO_MODEL</code> で変更できます。</p>
+        {!ai.enabled && <p className="text-xs text-muted mt-1">営業AI棒のフォルダにある <code>.env</code> に <code>ANTHROPIC_API_KEY=（API キー）</code> を書き、再起動すると接続されます。</p>}
       </Card>
       <div className="flex items-center gap-3">
         <Button variant="primary" busy={busy} onClick={save}>保存</Button>

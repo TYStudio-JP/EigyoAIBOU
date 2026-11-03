@@ -39,7 +39,6 @@ export function DeliveryBoard({ items }: { items: DeliveryWaiting[] }) {
                     <li key={it.id} className="flex flex-wrap items-center gap-2 text-sm">
                       <span className="flex-1 min-w-[12rem]">{it.description} × {it.qty}{it.unit}<span className="text-xs text-muted">　{it.supplier?.name ?? "仕入れ先未設定"}</span></span>
                       <input type="date" className={`${inputCls} w-44`} onChange={(e) => record(q.id, it.id, e.target.value)} disabled={busy === it.id} />
-                      <span className="text-xs text-muted">回答納期を入れると記録</span>
                     </li>
                   ))}
                 </ul>

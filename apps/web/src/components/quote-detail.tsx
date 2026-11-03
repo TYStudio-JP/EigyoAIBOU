@@ -161,17 +161,16 @@ export function QuoteDetail({ quote, activities, lines, aiEnabled, deal, dealOpt
           </Card>
 
           {quote.status === "won" && keijo && (
-            <Card className="no-print" title="伝票計上の指示（事務員向け）" action={<a href={`/api/quotes/${quote.id}/keijo`} className="text-xs text-brand hover:underline">Excel をダウンロード</a>}>
-              {keijo.flags.length === 0 && keijo.rows.every((r) => r.flags.length === 0) ? <p className="text-sm text-ok">見積りと基幹の整合に問題はありません。そのまま計上できます。</p> : (
+            <Card className="no-print" title="伝票計上" action={<a href={`/api/quotes/${quote.id}/keijo`} className="text-xs text-brand hover:underline">Excel をダウンロード</a>}>
+              {keijo.flags.length === 0 && keijo.rows.every((r) => r.flags.length === 0) ? <p className="text-sm text-ok">確認事項なし</p> : (
                 <ul className="text-sm space-y-1">
                   {keijo.flags.map((f, i) => <li key={"h" + i} className="text-danger">・{f}</li>)}
                   {keijo.rows.filter((r) => r.flags.length).map((r) => <li key={r.line_no}><b>明細{r.line_no} {r.description}</b><ul className="pl-4 text-xs text-warn">{r.flags.map((f, i) => <li key={i}>・{f}</li>)}</ul></li>)}
                 </ul>
               )}
-              <p className="text-xs text-muted mt-2">得意先コード・商品コード・仕入れ先コード・単価・納期を 1 行ずつ並べ、見積りや過去単価と違う点を赤く示します。</p>
             </Card>
           )}
-          <Card className="no-print" title="提出前レビュー（営業AI棒）" action={<Button size="sm" variant="primary" busy={busy === "review"} onClick={runReview} disabled={!aiEnabled} title={aiEnabled ? "" : "API キー未設定"}>AI にレビューさせる</Button>}>
+          <Card className="no-print" title="提出前レビュー" action={<Button size="sm" variant="primary" busy={busy === "review"} onClick={runReview} disabled={!aiEnabled} title={aiEnabled ? "" : "設定で AI を接続すると使えます"}>レビューする</Button>}>
             {review ? (
               <div className="text-sm space-y-2">
                 <div><LevelBadge level={review.verdict === "ok" ? "ok" : review.verdict === "caution" ? "warn" : "danger"}>{{ ok: "そのまま提出可", caution: "要確認", stop: "提出前に修正" }[review.verdict]}</LevelBadge></div>
@@ -180,7 +179,7 @@ export function QuoteDetail({ quote, activities, lines, aiEnabled, deal, dealOpt
                 <div className="rounded-md bg-bg p-3 text-xs"><b>備考欄の提案:</b> {review.remarks_suggestion}</div>
               </div>
             ) : (
-              <p className="text-sm text-muted">機械チェック（前回単価・粗利・仕入れルート・他社売価）の結果を読み、提出して良いか・何を直すべきかを要約します。</p>
+              <p className="text-sm text-muted">未実施</p>
             )}
           </Card>
 
@@ -191,11 +190,11 @@ export function QuoteDetail({ quote, activities, lines, aiEnabled, deal, dealOpt
           <Card title="フォロー">
             {(quote.status === "submitted" || quote.status === "tracking") ? (
               <div className="space-y-2">
-                <Button variant="primary" className="w-full justify-center" onClick={() => setFollowup(true)} disabled={!aiEnabled} title={aiEnabled ? "" : "API キー未設定"}>AI でフォロー文面を作る</Button>
+                <Button variant="primary" className="w-full justify-center" onClick={() => setFollowup(true)} disabled={!aiEnabled} title={aiEnabled ? "" : "設定で AI を接続すると使えます"}>フォロー文面を作る</Button>
                 <textarea className={`${inputCls} h-20`} placeholder="フォロー記録（電話・訪問・メールの内容）" value={note} onChange={(e) => setNote(e.target.value)} />
                 <Button className="w-full justify-center" busy={busy === "note"} onClick={addNote}>記録する</Button>
               </div>
-            ) : <p className="text-sm text-muted">{quote.status === "draft" ? "提出済にするとフォロー機能が使えます。" : "決着済みの案件です。"}</p>}
+            ) : <p className="text-sm text-muted">{quote.status === "draft" ? "提出後に使えます" : "決着済み"}</p>}
           </Card>
           <Card title="経緯">
             <ul className="space-y-2 text-xs">
@@ -214,7 +213,7 @@ export function QuoteDetail({ quote, activities, lines, aiEnabled, deal, dealOpt
           <label className={labelCls}>理由（次回提案の改善に使います）</label>
           <select className={inputCls} value={lostReason} onChange={(e) => setLostReason(e.target.value as LostReason)}>{(Object.keys(LOST_REASON_LABEL) as LostReason[]).map((k) => <option key={k} value={k}>{LOST_REASON_LABEL[k]}</option>)}</select>
           <label className={`${labelCls} mt-3`}>詳細</label>
-          <textarea className={`${inputCls} h-20`} value={lostDetail} onChange={(e) => setLostDetail(e.target.value)} placeholder="例）他社が1割安かった。納期は問題なし。" />
+          <textarea className={`${inputCls} h-20`} value={lostDetail} onChange={(e) => setLostDetail(e.target.value)} placeholder="詳細" />
           <div className="flex justify-end gap-2 mt-4"><Button onClick={() => setLost(false)}>やめる</Button><Button variant="danger" busy={busy === "status"} onClick={() => setStatus("lost", { lost_reason: lostReason, lost_detail: lostDetail })}>失注で確定</Button></div>
         </Modal>
       )}

@@ -29,7 +29,7 @@ export default function CallsPage() {
   };
   return (
     <>
-      <PageTitle title="電話メモ" sub="切った直後に 30 秒話すだけ。議事録・回答案・確認メールまで整います。" action={<LinkButton href="/calls/new" variant="primary">☎ 新しい電話メモ</LinkButton>} />
+      <PageTitle title="電話メモ" action={<LinkButton href="/calls/new" variant="primary">☎ 新しい電話メモ</LinkButton>} />
       <div className="space-y-4">
         <Card title={`メモ未入力（${open.length}）`}>{open.length === 0 ? <Empty>なし</Empty> : <ul className="divide-y divide-line">{open.map((c) => <Row key={c.id} c={c} />)}</ul>}</Card>
         <Card title="処理済み">{rest.length === 0 ? <Empty>なし</Empty> : <ul className="divide-y divide-line">{rest.map((c) => <Row key={c.id} c={c} />)}</ul>}</Card>
