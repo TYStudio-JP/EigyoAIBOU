@@ -138,7 +138,7 @@ export function QuoteComposer({ customers, contacts, samples, aiEnabled }: { cus
           </Card>
         </div>
       )}
-      {inquiry && <InquiryModal item={inquiry} requestedDelivery={draft?.requested_delivery ?? null} onClose={() => setInquiry(null)} />}
+      {inquiry && <InquiryModal item={inquiry} requestedDelivery={draft?.requested_delivery ?? null} onClose={() => setInquiry(null)} aiEnabled={aiEnabled} />}
     </div>
   );
 }
