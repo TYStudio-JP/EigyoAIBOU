@@ -207,7 +207,7 @@ export function QuoteDetail({ quote, activities, lines, aiEnabled, deal, dealOpt
       </div>
 
       {followup && <FollowupModal quoteId={quote.id} quoteNo={quote.quote_no} onClose={() => setFollowup(false)} onRecorded={() => router.refresh()} />}
-      {inquiry && <InquiryModal item={inquiry} requestedDelivery={quote.requested_delivery} onClose={() => setInquiry(null)} />}
+      {inquiry && <InquiryModal item={inquiry} requestedDelivery={quote.requested_delivery} onClose={() => setInquiry(null)} aiEnabled={aiEnabled} />}
       {lost && (
         <Modal title="失注として記録" onClose={() => setLost(false)}>
           <label className={labelCls}>理由（次回提案の改善に使います）</label>

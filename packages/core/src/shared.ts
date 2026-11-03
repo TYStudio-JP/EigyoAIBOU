@@ -21,3 +21,4 @@ export type { ReportFacts } from "./domain/report";
 export type { VisitBrief } from "./domain/brief";
 export type { VisitBriefAi } from "./ai/brief";
 export type { ChatTurn, ChatResult } from "./ai/chat";
+export type { ResearchResult } from "./ai/research";

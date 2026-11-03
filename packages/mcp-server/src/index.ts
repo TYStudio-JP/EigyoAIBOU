@@ -13,7 +13,7 @@ import {
   proposePrice, ROUTE_LABEL, seedDatabase, setQuoteStatus, STATUS_LABEL, today, extractQuoteRequest, extractQuoteRequestFallback,
   createCall, executeCallRequests, findCustomerByTel, listCalls, structureCallMemo, composeCallConfirmation, updateCall, CALL_REQUEST_LABEL,
   adjudicateDealLink, attachCallToDeal, attachQuoteToDeal, dealTimeline, getDeal, handoverCustomer, handoverFacts, listContacts, listDeals, listUsers, refreshDealSummary, DEAL_STATUS_LABEL, CONTACT_STATUS_LABEL,
-  buildKeijo, deliveryWaitingList, recordSupplierDelivery, deliveryNotice, priceImpact, reportFacts, reportDraft, visitBrief, listSuppliers,
+  buildKeijo, deliveryWaitingList, recordSupplierDelivery, deliveryNotice, priceImpact, reportFacts, reportDraft, visitBrief, listSuppliers, researchWeb,
   type LostReason, type NewQuoteItem, type QuoteStatus,
 } from "@eigyo/core";
 
@@ -318,6 +318,12 @@ server.registerTool("visit_brief", {
   description: "訪問直前に読む 1 ページ：担当者、進行中の案件と次の一手、直近の電話、返事待ちの見積り、定番品、横展開候補、前任者の申し送り。",
   inputSchema: { customer: z.string() },
 }, async ({ customer }) => { const c = resolveCustomer(customer); return text(visitBrief(db, c.id)); });
+
+server.registerTool("web_research", {
+  title: "ウェブで調べる",
+  description: "商品の仕様・規格・相場・メーカー情報・得意先の会社情報などをウェブで調べ、出典 URL 付きで要約する（Claude のウェブ検索）。",
+  inputSchema: { query: z.string(), context: z.string().optional() },
+}, async ({ query, context }) => text(await researchWeb(query, context ?? "", today())));
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

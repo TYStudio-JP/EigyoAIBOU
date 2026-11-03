@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ChatTurn } from "@eigyo/core/shared";
 import { Button } from "./ui";
 
-const SUGGEST = ["今日やることは？", "東海精密の状況を教えて", "エンドミル φ10 を 10 本、東海精密にいくらで出せる？", "納期回答待ちは？", "みどり食品に提案できる商品は？", "今日の日報を作って"];
+const SUGGEST = ["今日やることは？", "東海精密の状況を教えて", "エンドミル φ10 を 10 本、東海精密にいくらで出せる？", "納期回答待ちは？", "みどり食品に提案できる商品は？", "耐切創手袋のカットレベル規格を調べて", "今日の日報を作って"];
 
 type Rec = { start(): void; stop(): void; lang: string; continuous: boolean; interimResults: boolean; onresult: ((e: { results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null };
 
@@ -59,7 +59,7 @@ export function Chat({ initial, aiEnabled }: { initial: ChatTurn[]; aiEnabled: b
               {t.text}
               {t.role === "assistant" && ((t.links?.length ?? 0) > 0 || (t.tools?.length ?? 0) > 0) && (
                 <div className="mt-2 pt-2 border-t border-line flex flex-wrap gap-1.5">
-                  {t.links?.map((l) => <Link key={l.href} href={l.href} className="rounded-full bg-brand/10 text-brand px-2.5 py-0.5 text-xs font-semibold">{l.label} →</Link>)}
+                  {t.links?.map((l) => l.href.startsWith("http") ? <a key={l.href} href={l.href} target="_blank" rel="noreferrer" className="rounded-full bg-bg border border-line text-ink px-2.5 py-0.5 text-xs">🌐 {l.label}</a> : <Link key={l.href} href={l.href} className="rounded-full bg-brand/10 text-brand px-2.5 py-0.5 text-xs font-semibold">{l.label} →</Link>)}
                   {t.tools?.map((x) => <span key={x} className="rounded-full bg-bg text-muted px-2 py-0.5 text-[11px]">{x}</span>)}
                 </div>
               )}

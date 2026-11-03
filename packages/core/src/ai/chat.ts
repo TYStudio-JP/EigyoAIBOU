@@ -18,6 +18,7 @@ import { deliveryWaitingList } from "../domain/delivery";
 import { priceImpact } from "../domain/price-impact";
 import { reportDraft, reportFacts } from "../domain/report";
 import { DEAL_STATUS_LABEL, ROUTE_LABEL, STATUS_LABEL } from "../domain/types";
+import { WEB_SEARCH_TOOL } from "./research";
 
 export interface ChatTurn { role: "user" | "assistant"; text: string; at: string; tools?: string[]; links?: { label: string; href: string }[] }
 export interface ChatResult { reply: string; tools_used: string[]; links: { label: string; href: string }[] }
@@ -67,7 +68,8 @@ const CHAT_SYSTEM = SYSTEM_BASE + `
 - スマホで読む前提。結論を 1〜2 行で先に、根拠は箇条書きで 3〜5 行まで。Markdown の見出しは使わず、太字と箇条書きだけ。
 - 得意先名や品番が曖昧なら、まず検索して候補を出し、1 つに絞れないときは聞き返す。
 - 見積り作成やフォロー記録など「書き込む」道具は、依頼が明確なときだけ使い、何をしたか見積番号付きで報告する。価格を変えるときは値引き下限を併記する。
-- 他社の社名は得意先への文面に入れない（「同業のお客様」と言い換える）。`;
+- 他社の社名は得意先への文面に入れない（「同業のお客様」と言い換える）。
+- 社内の記録に無いこと（メーカーの仕様・規格・相場・業界ニュース・得意先の会社情報）は web_search で調べ、出典 URL を本文に添える。社内の記録とウェブの情報は区別して書く。`;
 
 /** 1 ターン分のチャット。履歴（テキストのみ）＋新しい発言 → 道具を使って回答。 */
 export async function runChat(db: Db, history: ChatTurn[], userMessage: string, userId: number | null): Promise<ChatResult> {
@@ -85,7 +87,7 @@ export async function runChat(db: Db, history: ChatTurn[], userMessage: string, 
     fallbacks: "default",
     system: [{ type: "text", text: CHAT_SYSTEM, cache_control: { type: "ephemeral" } }, { type: "text", text: `本日: ${today()}。操作ユーザー: ${me ? `${me.name}（${me.department}）` : "不明"}` }],
     messages,
-    tools: chatTools(db, ctx),
+    tools: [...chatTools(db, ctx), WEB_SEARCH_TOOL],
     max_iterations: 8,
     thread: false,
     output_config: { effort: "low" },
@@ -93,6 +95,15 @@ export async function runChat(db: Db, history: ChatTurn[], userMessage: string, 
   const final = await runner;
   if (final.stop_reason === "refusal") return { reply: "この質問には回答できませんでした。", tools_used: ctx.used, links: ctx.links };
   const reply = final.content.filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text").map((b) => b.text).join("\n").trim() || "（回答を生成できませんでした）";
+  // ウェブ検索の出典をリンクとして添える
+  const seenUrl = new Set<string>();
+  for (const m of runner.params.messages) {
+    if (m.role !== "assistant" || typeof m.content === "string") continue;
+    for (const b of m.content) {
+      if (b.type === "web_search_tool_result" && Array.isArray(b.content)) { if (!ctx.used.includes("ウェブ検索")) ctx.used.push("ウェブ検索"); for (const r of b.content) if (r.type === "web_search_result" && !seenUrl.has(r.url)) { seenUrl.add(r.url); ctx.links.push({ label: r.title.slice(0, 40), href: r.url }); } }
+    }
+  }
+  for (const b of final.content) if (b.type === "text" && b.citations) for (const c of b.citations) if (c.type === "web_search_result_location" && !seenUrl.has(c.url)) { seenUrl.add(c.url); ctx.links.push({ label: (c.title ?? c.url).slice(0, 40), href: c.url }); }
   const seen = new Set<string>();
   return { reply, tools_used: ctx.used, links: ctx.links.filter((l) => (seen.has(l.href) ? false : (seen.add(l.href), true))) };
 }
