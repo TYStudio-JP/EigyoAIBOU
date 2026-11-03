@@ -322,8 +322,8 @@ server.registerTool("visit_brief", {
 server.registerTool("web_research", {
   title: "ウェブで調べる",
   description: "商品の仕様・規格・相場・メーカー情報・得意先の会社情報などをウェブで調べ、出典 URL 付きで要約する（Claude のウェブ検索）。",
-  inputSchema: { query: z.string(), context: z.string().optional() },
-}, async ({ query, context }) => text(await researchWeb(query, context ?? "", today())));
+  inputSchema: { query: z.string(), context: z.string().optional(), kind: z.enum(["general", "equivalent", "spec", "size", "price", "successor"]).optional().describe("観点: 同等品 / 仕様 / 寸法 / 相場 / 後継品") },
+}, async ({ query, context, kind }) => text(await researchWeb(query, context ?? "", today(), kind ?? "general")));
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

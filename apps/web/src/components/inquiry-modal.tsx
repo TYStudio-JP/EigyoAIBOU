@@ -25,8 +25,8 @@ export function InquiryModal({ item, requestedDelivery, onClose, aiEnabled = tru
   return (
     <Modal title={`仕入れ先への問い合わせ — ${sup?.supplier_name ?? ""}`} onClose={onClose}>
       <div className="mb-4 pb-4 border-b border-line">
-        <label className={labelCls}>仕様・規格・相場を調べる</label>
-        <WebResearch defaultQuery={`${item.product ? `${item.product.maker} ${item.product.part_number} ` : ""}${item.description} 仕様 規格`} context={`得意先への見積り明細: ${item.description} × ${item.qty}${item.unit}`} aiEnabled={aiEnabled} compact />
+        <label className={labelCls}>ウェブで調べる</label>
+        <WebResearch product={item.product ? { maker: item.product.maker, part_number: item.product.part_number, name: item.product.name, spec: item.product.spec } : { name: item.description }} context={`得意先への見積り明細: ${item.description} × ${item.qty}${item.unit}`} aiEnabled={aiEnabled} compact />
       </div>
       <label className={labelCls}>確認したいこと</label>
       <textarea className={`${inputCls} h-20`} value={question} onChange={(e) => setQuestion(e.target.value)} />

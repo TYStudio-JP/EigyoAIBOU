@@ -1,5 +1,6 @@
 import { currentSupplierPrices, hasApiKey, listProducts, ROUTE_LABEL } from "@eigyo/core";
 import { WebResearch } from "@/components/web-research";
+import { ProductResearchButton } from "@/components/product-research-button";
 import { db } from "@/lib/db";
 import { Card, PageTitle } from "@/components/ui";
 import { yen } from "@/lib/format";
@@ -15,7 +16,7 @@ export default function ProductsPage() {
     <>
       <div className="lg:hidden mb-3 rounded-md border border-line bg-surface px-3 py-2 text-xs text-muted">登録・変更はパソコンから行えます。</div>
       <PageTitle title="商品・仕入れ先" />
-      <Card className="mb-4" title="ウェブで調べる"><WebResearch defaultQuery="" aiEnabled={hasApiKey()} compact /></Card>
+      <Card className="mb-4" title="ウェブで調べる"><WebResearch aiEnabled={hasApiKey()} compact /></Card>
       <div className="space-y-4">
         {[...byCat.entries()].map(([cat, ps]) => (
           <Card key={cat} title={cat}>
@@ -28,7 +29,7 @@ export default function ProductsPage() {
                     <tr key={p.id} className="border-t border-line align-top">
                       <td className="py-1.5 num text-muted">{p.code}</td>
                       <td className="num">{p.part_number}</td>
-                      <td>{p.name}<div className="text-xs text-muted">{p.spec}</div></td>
+                      <td>{p.name}<div className="text-xs text-muted">{p.spec}</div><ProductResearchButton product={{ maker: p.maker, part_number: p.part_number, name: p.name, spec: p.spec }} aiEnabled={hasApiKey()} /></td>
                       <td className="text-muted">{p.maker}</td>
                       <td className="text-right num">{yen(p.list_price)}</td>
                       <td className="pl-4">
