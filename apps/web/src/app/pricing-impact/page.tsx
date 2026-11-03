@@ -13,7 +13,7 @@ export default async function PricingImpactPage({ searchParams }: { searchParams
   const totalGap = r.rows.reduce((s, x) => s + x.gap_amount, 0);
   return (
     <>
-      <PageTitle title="価格改定の影響" sub={`現在の仕入れ値で直近の受注単価を売り続けると、粗利下限 ${r.floor_pct}% を割る得意先×商品。値上げ交渉の順番を決めるための一覧です。`} />
+      <PageTitle title="価格改定の影響" sub={`粗利下限 ${r.floor_pct}%`} />
       <Card title="値上げをシミュレーション" className="mb-4">
         <form className="flex flex-wrap items-end gap-3 text-sm" action="/pricing-impact">
           <div><label className="block text-xs text-muted mb-1">仕入れ値の上昇率（%）</label><input name="pct" type="number" step="1" defaultValue={sp.pct ?? ""} placeholder="例 10" className={`${inputCls} w-28 num`} /></div>

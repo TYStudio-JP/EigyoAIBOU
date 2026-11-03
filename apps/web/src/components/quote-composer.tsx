@@ -65,7 +65,7 @@ export function QuoteComposer({ customers, contacts, samples, aiEnabled }: { cus
 
   return (
     <div className="space-y-5">
-      <Card title="① 依頼をそのまま入れる" action={<span className="text-xs text-muted">{aiEnabled ? "AI が品目・数量・納期・不明点を読み取ります" : "簡易モード（API キー未設定）"}</span>}>
+      <Card title="① 依頼を入れる">
         <div className="flex flex-wrap items-center gap-2 mb-3">
           {(["email", "memo", "file"] as const).map((t) => (
             <button key={t} type="button" onClick={() => setSourceType(t)} className={`text-xs rounded-full px-3 py-1 border ${sourceType === t ? "bg-brand text-brand-ink border-brand" : "border-line bg-surface"}`}>{{ email: "メール本文を貼り付け", memo: "電話・口頭のメモ", file: "Excel / PDF / 画像を添付" }[t]}</button>
@@ -73,22 +73,22 @@ export function QuoteComposer({ customers, contacts, samples, aiEnabled }: { cus
           <span className="text-xs text-muted ml-2">サンプル:</span>
           {samples.map((s) => <button key={s.label} type="button" className="text-xs text-brand hover:underline" onClick={() => { setText(s.text); setSourceType(s.type); }}>{s.label}</button>)}
         </div>
-        <textarea className={`${inputCls} h-44 font-sans`} placeholder={sourceType === "memo" ? "例）東海精密 佐藤さんから電話。エンドミル φ10 を15本、切削油 18L を10缶。来月5日までに。前回より安くできないかとのこと。" : "得意先からのメール本文を貼り付けてください（件名・署名ごとでOK）"} value={text} onChange={(e) => setText(e.target.value)} />
+        <textarea className={`${inputCls} h-44 font-sans`} placeholder={sourceType === "memo" ? "電話や口頭で聞いた内容" : "メール本文を貼り付け"} value={text} onChange={(e) => setText(e.target.value)} />
         <div className="grid md:grid-cols-3 gap-3 mt-3 items-end">
           <div>
-            <label className={labelCls}>添付ファイル（任意：xlsx / pdf / png / jpg / csv）</label>
+            <label className={labelCls}>添付（Excel・PDF・写真）</label>
             <input type="file" accept=".xlsx,.xlsm,.pdf,.png,.jpg,.jpeg,.webp,.csv,.txt" className="text-sm" onChange={(e) => { setFile(e.target.files?.[0] ?? null); if (e.target.files?.[0]) setSourceType("file"); }} />
           </div>
           <div>
-            <label className={labelCls}>得意先が分かっている場合（任意）</label>
+            <label className={labelCls}>得意先</label>
             <select className={inputCls} value={preCustomer} onChange={(e) => setPreCustomer(e.target.value ? Number(e.target.value) : "")}>
-              <option value="">自動判定（依頼文から名寄せ）</option>
+              <option value="">文面から判定</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.code} {c.name}</option>)}
             </select>
           </div>
           <div className="flex gap-2 justify-end">
             <Button onClick={startManual} className="flex-1 lg:flex-none justify-center">手入力で作る</Button>
-            <Button variant="primary" busy={busy} onClick={extract} disabled={!text.trim() && !file} className="flex-1 lg:flex-none justify-center">営業AI棒に読ませる</Button>
+            <Button variant="primary" busy={busy} onClick={extract} disabled={!text.trim() && !file} className="flex-1 lg:flex-none justify-center">読み取って見積りを作る</Button>
           </div>
         </div>
         {err && !draft && <p className="text-sm text-danger mt-2">{err}</p>}
@@ -96,7 +96,7 @@ export function QuoteComposer({ customers, contacts, samples, aiEnabled }: { cus
 
       {draft && (
         <div ref={resultRef} className="space-y-4">
-          <Card title="② 読み取り結果を確認して、価格を決める" action={draft.ai_used ? <span className="text-xs text-ok">AI 抽出</span> : <span className="text-xs text-muted">{draft.source_type === "manual" ? "手入力" : "簡易抽出"}</span>}>
+          <Card title="② 内容を確認">
             <div className="grid md:grid-cols-4 gap-3">
               <div className="md:col-span-1">
                 <label className={labelCls}>得意先 {draft.customer_candidates.length > 1 && draft.customer_candidates.length < customers.length && <span className="text-warn">候補が複数あります</span>}</label>
@@ -124,16 +124,16 @@ export function QuoteComposer({ customers, contacts, samples, aiEnabled }: { cus
               </div>
             )}
           </Card>
-          <Card title="③ 明細と価格（履歴・原価・仕入れルートを自動照合）">
-            {!draft.customer_id && <p className="text-xs text-warn mb-2">得意先を選ぶと、過去価格の照合と提案単価が表示されます。</p>}
+          <Card title="③ 明細と価格">
+            {!draft.customer_id && <p className="text-xs text-warn mb-2">得意先を選んでください</p>}
             <ItemsEditor customerId={draft.customer_id} items={draft.items} onChange={setItems} onInquiry={(it) => setInquiry(it)} />
             <div className="mt-4">
-              <label className={labelCls}>備考（見積書に印字）</label>
-              <textarea className={`${inputCls} h-16`} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder="例）納期はメーカー在庫状況により変動する場合があります。" />
+              <label className={labelCls}>備考</label>
+              <textarea className={`${inputCls} h-16`} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder="見積書に印字する備考" />
             </div>
             <div className="flex items-center justify-end gap-3 mt-4">
               {err && <span className="text-sm text-danger">{err}</span>}
-              <Button variant="primary" busy={saving} onClick={save}>見積りを保存して詳細へ</Button>
+              <Button variant="primary" busy={saving} onClick={save}>見積りを保存</Button>
             </div>
           </Card>
         </div>

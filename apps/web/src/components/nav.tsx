@@ -49,7 +49,6 @@ export function Nav() {
             </Link>
           ))}
         </nav>
-        <div className="p-4 text-[11px] text-muted border-t border-line">Built with Claude Japan 2026</div>
       </aside>
 
       {/* スマホ：上部バー */}

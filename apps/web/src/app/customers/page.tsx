@@ -18,7 +18,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   const pastInfo = new Map(past.map((p) => [p.customer.id, p]));
   return (
     <>
-      <PageTitle title="得意先" sub="得意先を開くと、担当者・納入先・案件・横展開候補・引継ぎ書が見られます。" action={<Link href="/contacts/new" className="text-sm text-brand hover:underline">＋ 担当者を追加（名刺OK）</Link>} />
+      <PageTitle title="得意先" action={<Link href="/contacts/new" className="text-sm text-brand hover:underline">＋ 担当者を追加（名刺OK）</Link>} />
       <div className="flex flex-wrap gap-2 mb-4">
         {[["mine", `自分の担当（${me ? all.filter((c) => c.owner_user_id === me.id).length : 0}）`], ["past", `過去の担当先（${past.length}）`], ["all", `全て（${all.length}）`]].map(([k, label]) => (
           <Link key={k} href={`/customers?scope=${k}`} className={`text-xs rounded-full px-3 py-1 border ${scope === k ? "bg-brand text-brand-ink border-brand" : "border-line bg-surface"}`}>{label}</Link>

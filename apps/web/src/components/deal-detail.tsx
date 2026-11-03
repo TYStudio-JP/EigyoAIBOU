@@ -46,7 +46,7 @@ export function DealDetail({ deal, timeline, contacts, endCustomers, siblings, a
         <div className="text-sm text-muted mt-1 num">金額 {yen(deal.amount)}・見積り {deal.quote_count} 件・電話 {deal.call_count} 件・開始 {dateJp(deal.opened_at)}・最終 {dateJp(deal.last_activity_at)}</div>
       </div>
 
-      <Card title="ここまでの経緯と今の状況" action={<div className="flex gap-2"><Button size="sm" onClick={() => setEdit(!edit)}>{edit ? "閉じる" : "編集"}</Button><Button size="sm" variant="primary" busy={busy === "refresh"} onClick={() => call("refresh", `/api/deals/${deal.id}/refresh`, {})}>{aiEnabled ? "AI で要約を更新" : "要約を更新"}</Button></div>}>
+      <Card title="経緯と状況" action={<div className="flex gap-2"><Button size="sm" onClick={() => setEdit(!edit)}>{edit ? "閉じる" : "編集"}</Button><Button size="sm" variant="primary" busy={busy === "refresh"} onClick={() => call("refresh", `/api/deals/${deal.id}/refresh`, {})}>要約を更新</Button></div>}>
         <pre className="whitespace-pre-wrap text-sm font-sans leading-relaxed">{deal.summary || "（まだ要約がありません。「要約を更新」を押してください）"}</pre>
         <div className={`mt-3 rounded-md px-3 py-2 text-sm ${overdue ? "bg-red-50 border border-red-200 text-red-900" : "bg-blue-50 border border-blue-200 text-blue-900"}`}>
           <b>次の一手:</b> {deal.next_action || "未設定"}{deal.next_action_due && <span className="ml-2 text-xs">期限 {dateJp(deal.next_action_due)}{overdue ? "（期限切れ）" : ""}</span>}
@@ -61,10 +61,10 @@ export function DealDetail({ deal, timeline, contacts, endCustomers, siblings, a
           <div className="mt-4 grid gap-3 lg:grid-cols-2 border-t border-line pt-4">
             <div className="lg:col-span-2"><label className={labelCls}>件名</label><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} /></div>
             <div><label className={labelCls}>得意先の担当者</label><select className={inputCls} value={contactId} onChange={(e) => setContactId(e.target.value ? Number(e.target.value) : "")}><option value="">—</option>{contacts.map((c) => <option key={c.id} value={c.id}>{c.name}{c.status !== "active" ? `（${c.status === "retired" ? "退職" : "異動"}）` : ""}</option>)}</select></div>
-            <div><label className={labelCls}>納入先（得意先の得意先）</label><select className={inputCls} value={endId} onChange={(e) => setEndId(e.target.value ? Number(e.target.value) : "")}><option value="">—</option>{endCustomers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+            <div><label className={labelCls}>納入先</label><select className={inputCls} value={endId} onChange={(e) => setEndId(e.target.value ? Number(e.target.value) : "")}><option value="">—</option>{endCustomers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
             <div><label className={labelCls}>次の一手</label><input className={inputCls} value={nextAction} onChange={(e) => setNextAction(e.target.value)} /></div>
             <div><label className={labelCls}>期限</label><input type="date" className={inputCls} value={due} onChange={(e) => setDue(e.target.value)} /></div>
-            <div className="lg:col-span-2"><label className={labelCls}>メモを追加（経緯に残る）</label><input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="例）上長承認済み。7,200円まで可。" /></div>
+            <div className="lg:col-span-2"><label className={labelCls}>メモ</label><input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="経緯に残すメモ" /></div>
             <div className="lg:col-span-2 flex flex-wrap gap-2 justify-end">
               {deal.status !== "won" && deal.status !== "lost" && <><Button variant="danger" size="sm" busy={busy === "patch"} onClick={() => patch({ status: "lost" })}>失注で閉じる</Button><Button size="sm" busy={busy === "patch"} onClick={() => patch({ status: "won" })}>受注で閉じる</Button></>}
               <Button variant="primary" busy={busy === "patch"} onClick={() => patch({ title, contact_id: contactId || null, end_customer_id: endId || null, next_action: nextAction, next_action_due: due || null, note: note || undefined })}>保存</Button>
@@ -74,8 +74,7 @@ export function DealDetail({ deal, timeline, contacts, endCustomers, siblings, a
         {err && <p className="text-sm text-danger mt-2">{err}</p>}
       </Card>
 
-      <Card title="時系列（電話・見積り・フォロー・メール）" action={<button type="button" className="text-xs text-brand hover:underline" onClick={() => setFix(!fix)}>{fix ? "修正を閉じる" : "紐づけを直す"}</button>}>
-        {fix && <p className="text-xs text-muted mb-2">間違って紐づいた見積り・電話は、ここから別の案件へ移すか、新しい案件として分離できます。</p>}
+      <Card title="時系列" action={<button type="button" className="text-xs text-brand hover:underline" onClick={() => setFix(!fix)}>{fix ? "修正を閉じる" : "紐づけを直す"}</button>}>
         <ul className="space-y-2">
           {timeline.map((it, i) => (
             <li key={i} className="flex gap-2 text-sm">

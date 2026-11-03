@@ -114,7 +114,7 @@ export function ItemsEditor({ customerId, items, onChange, excludeQuoteId, onInq
                       {it.checks.length === 0 && it.product && <LevelBadge level="ok">OK</LevelBadge>}
                       {it.checks.map((c) => <LevelBadge key={c.code} level={c.level}>{c.title}</LevelBadge>)}
                     </div>
-                    {it.product && <button type="button" className="text-[11px] text-brand hover:underline mt-1" onClick={() => setOpen(open === i ? null : i)}>{open === i ? "根拠を閉じる" : "根拠・履歴を見る"}</button>}
+                    {it.product && <button type="button" className="text-[11px] text-brand hover:underline mt-1" onClick={() => setOpen(open === i ? null : i)}>{open === i ? "閉じる" : "根拠・履歴"}</button>}
                   </td>
                   <td className="py-2 text-right"><button type="button" className="text-muted hover:text-danger" title="削除" onClick={() => reprice(items.filter((_, k) => k !== i))}>×</button></td>
                 </tr>

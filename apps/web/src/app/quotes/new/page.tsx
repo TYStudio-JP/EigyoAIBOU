@@ -9,7 +9,7 @@ export default function NewQuotePage() {
   const customers = listCustomers(db());
   return (
     <>
-      <PageTitle title="見積りを作る" sub="メール・電話メモ・添付をそのまま渡すだけ。品目の特定、過去価格・原価・仕入れルートの照合、赤字や値下げの警告まで営業AI棒が済ませます。" />
+      <PageTitle title="見積りを作る" />
       <QuoteComposer customers={customers} contacts={listContacts(db(), undefined, { includeInactive: false })} samples={SAMPLE_REQUESTS} aiEnabled={hasApiKey()} />
     </>
   );

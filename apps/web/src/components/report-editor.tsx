@@ -31,14 +31,13 @@ export function ReportEditor({ initialDate, aiEnabled }: { initialDate: string; 
       <Card>
         <div className="flex flex-wrap items-end gap-3">
           <div><label className={labelCls}>日付</label><input type="date" className={`${inputCls} py-2.5`} value={date} onChange={(e) => setDate(e.target.value)} /></div>
-          <div className="flex-1 min-w-[16rem]"><label className={labelCls}>所感・雑談メモ（事実は自動で入っているので、ここに一言だけ）</label><input className={`${inputCls} py-2.5`} value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="例）佐藤課長、第2ラインは年内稼働で急いでいる様子。競合は関東工具。" /></div>
-          <Button variant="primary" busy={busy === "ai"} onClick={polish} disabled={!aiEnabled} title={aiEnabled ? "" : "API キー未設定"}>AI で清書</Button>
+          <div className="flex-1 min-w-[16rem]"><label className={labelCls}>所感</label><input className={`${inputCls} py-2.5`} value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="一言" /></div>
+          <Button variant="primary" busy={busy === "ai"} onClick={polish} disabled={!aiEnabled} title={aiEnabled ? "" : "設定で AI を接続すると使えます"}>清書する</Button>
         </div>
       </Card>
       <Card title={`日報 ${date.replace(/-/g, "/")}${saved ? "（保存済み）" : ""}`} action={<div className="flex gap-2"><CopyButton text={body} /><Button size="sm" variant="primary" busy={busy === "save"} onClick={save}>保存</Button></div>}>
         {busy === "load" ? <p className="text-sm text-muted">集計中…</p> : <textarea className={`${inputCls} font-sans leading-relaxed`} rows={22} value={body} onChange={(e) => setBody(e.target.value)} />}
         {err && <p className="text-sm text-danger mt-2">{err}</p>}
-        <p className="text-xs text-muted mt-2">電話メモ・見積り・フォロー・案件の記録から自動で組み立てています。自分の担当得意先の分だけが対象です。</p>
       </Card>
     </div>
   );

@@ -12,8 +12,8 @@ export default function ProductsPage() {
   for (const p of products) byCat.set(p.category, [...(byCat.get(p.category) ?? []), p]);
   return (
     <>
-      <div className="lg:hidden mb-3 rounded-md border border-line bg-surface px-3 py-2 text-xs text-muted">マスタの登録・変更はデスクトップから行ってください。スマホでは閲覧のみです。</div>
-      <PageTitle title="商品・仕入れ先マスタ" sub="同じ商品でも仕入れルート（メーカー直・代理店・商社）で原価と納期が違います。最安ルートを太字で表示。" />
+      <div className="lg:hidden mb-3 rounded-md border border-line bg-surface px-3 py-2 text-xs text-muted">登録・変更はパソコンから行えます。</div>
+      <PageTitle title="商品・仕入れ先" />
       <div className="space-y-4">
         {[...byCat.entries()].map(([cat, ps]) => (
           <Card key={cat} title={cat}>
