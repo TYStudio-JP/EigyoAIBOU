@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ChatTurn } from "@eigyo/core/shared";
 import { Button } from "./ui";
 
-const SUGGEST = ["今日やることは？", "東海精密の状況を教えて", "エンドミル φ10 を 10 本、東海精密にいくらで出せる？", "納期回答待ちは？", "みどり食品に提案できる商品は？", "耐切創手袋のカットレベル規格を調べて", "今日の日報を作って"];
+const SUGGEST = ["今日やることは？", "東海精密の状況を教えて", "エンドミル φ10 を 10 本、東海精密にいくらで出せる？", "納期回答待ちは？", "みどり食品に提案できる商品は？", "HK-5L の同等品を探して", "エアシリンダ AS-32-100 のサイズは何ミリ？", "今日の日報を作って"];
 
 type Rec = { start(): void; stop(): void; lang: string; continuous: boolean; interimResults: boolean; onresult: ((e: { results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null };
 

@@ -156,7 +156,7 @@ export function ProposalDetail({ item, onInquiry }: { item: DraftItem; onInquiry
           <li>最安仕入れ: <span className="num">{yen(p.best_cost)}</span>（{p.best_supplier_name ?? "-"}）</li>
         </ul>
         {item.checks.map((c) => <p key={c.code} className="mt-2 text-ink"><b>{c.title}</b>：{c.detail}</p>)}
-        {onInquiry && <button type="button" className="mt-2 text-brand hover:underline" onClick={() => onInquiry(item)}>仕入れ先へ納期・価格を問い合わせる（下書き作成）</button>}
+        {onInquiry && <button type="button" className="mt-2 text-brand hover:underline" onClick={() => onInquiry(item)}>🌐 同等品・サイズを調べる／仕入れ先に問い合わせる</button>}
       </div>
       <div>
         <div className="font-semibold mb-1">仕入れルート比較</div>
