@@ -17,7 +17,7 @@ export function hasApiKey(): boolean {
 }
 
 export class AiUnavailableError extends Error {
-  constructor(msg = "ANTHROPIC_API_KEY が設定されていません。.env に API キーを設定してください。") {
+  constructor(msg = "AI 機能は未接続です。設定から接続してください。") {
     super(msg);
     this.name = "AiUnavailableError";
   }

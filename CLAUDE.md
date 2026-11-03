@@ -11,7 +11,8 @@ Built with Claude: Japan 2026 ハッカソン（テーマ #1「あなたにし�
 5. **案件** — 得意先×ひとつの話。見積り・電話・フォロー・メールを自動で束ね（`domain/deals.ts` の採点＋ `ai/deals.ts` の裁定）、状態は自動導出、経緯は 3 行要約＋詳細。担当者（`contacts`）・納入先（`end_customers`）は案件の属性。
 6. **担当者・引継ぎ** — 名刺写真から担当者登録（`ai/card.ts`）。自社ユーザー（`users`）間で得意先を引き継ぐと（`domain/handover.ts`）、引継ぎ書を保存し、各案件に「ここまでは前回の担当者〇〇」を記録、前任者には過去の担当先として残す。
 7. **伝票計上指示**（`domain/keijo.ts`）、**営業日報**（`domain/report.ts` + `ai/report.ts`）、**納期回答待ち**（`domain/delivery.ts`）、**訪問前ブリーフ**（`domain/brief.ts` + `ai/brief.ts`）、**価格改定の影響**（`domain/price-impact.ts`）。いずれも事実は決定的に集め、AI は清書・要約だけ。
-8. 仕入れ先への納期・価格問い合わせメールの下書き、Excel 見積書出力。マスタの CSV 取り込みは README に設計のみ（未実装）。
+8. **質問する（チャット）** — `ai/chat.ts` の tool runner。道具は Web/MCP と同じドメイン関数。履歴は `chats` にユーザーごと。
+9. 仕入れ先への納期・価格問い合わせメールの下書き、Excel 見積書出力。マスタの CSV 取り込みは README に設計のみ（未実装）。
 
 **スマホが主役。** 画面は下タブ＋大きなボタンのスマホ優先レイアウト（`lg:` 以上でサイドバー）。マスタ登録・設定はデスクトップのみ。外出先からは `npm run tunnel`（Cloudflare）＋ `EIGYO_ACCESS_KEY`（`apps/web/src/proxy.ts`）。
 

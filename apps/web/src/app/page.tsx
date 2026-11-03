@@ -27,7 +27,7 @@ export default async function Dashboard() {
         <div className="mb-4 rounded-md border border-line bg-surface px-4 py-2 text-xs text-muted flex items-center justify-between"><span>AI 機能は未接続です</span><Link href="/settings" className="text-brand hover:underline">設定で接続</Link></div>
       )}
       <div className="lg:hidden grid grid-cols-4 gap-2 mb-4 text-center text-xs">
-        {[["/calls/new", "☎", "電話メモ"], ["/quotes/new", "✎", "見積り"], ["/report", "✉", "日報"], ["/delivery", "⏱", "納期"]].map(([h, i, l]) => <Link key={h} href={h} className="rounded-lg bg-surface border border-line py-2.5"><div className="text-xl">{i}</div>{l}</Link>)}
+        {[["/chat", "💬", "質問"], ["/quotes/new", "✎", "見積り"], ["/report", "✉", "日報"], ["/delivery", "⏱", "納期"]].map(([h, i, l]) => <Link key={h} href={h} className="rounded-lg bg-surface border border-line py-2.5"><div className="text-xl">{i}</div>{l}</Link>)}
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <Stat label="要フォロー（提出済・追跡中）" value={stats.by_status.submitted + stats.by_status.tracking} sub={`提出済 ${stats.by_status.submitted} / 追跡中 ${stats.by_status.tracking}`} tone="warn" />

@@ -20,3 +20,4 @@ export type { ImpactRow, ImpactSim } from "./domain/price-impact";
 export type { ReportFacts } from "./domain/report";
 export type { VisitBrief } from "./domain/brief";
 export type { VisitBriefAi } from "./ai/brief";
+export type { ChatTurn, ChatResult } from "./ai/chat";

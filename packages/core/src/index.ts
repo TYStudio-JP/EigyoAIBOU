@@ -26,3 +26,4 @@ export * from "./domain/report";
 export * from "./domain/brief";
 export * from "./ai/report";
 export * from "./ai/brief";
+export * from "./ai/chat";
