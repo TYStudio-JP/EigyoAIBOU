@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 
 const desktop = [
   { href: "/", label: "ダッシュボード", icon: "▦" },
+  { href: "/chat", label: "質問する", icon: "💬" },
   { href: "/calls", label: "電話メモ", icon: "☎" },
   { href: "/deals", label: "案件", icon: "◆" },
   { href: "/quotes/new", label: "見積りを作る", icon: "✎" },
@@ -56,7 +57,7 @@ export function Nav() {
         <Link href="/" className="font-bold text-brand text-lg">営業AI棒</Link>
         <div className="flex items-center gap-3 text-sm">
           <Link href="/calls/new" className="rounded-full bg-brand text-brand-ink px-3 py-1 text-xs font-semibold">☎ 電話メモ</Link>
-          <Link href="/quotes/new" className="rounded-full border border-line px-3 py-1 text-xs font-semibold">✎ 見積り</Link>
+          <Link href="/chat" className="rounded-full border border-line px-3 py-1 text-xs font-semibold">💬 質問</Link>
         </div>
       </header>
 

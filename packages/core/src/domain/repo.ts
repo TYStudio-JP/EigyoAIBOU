@@ -651,4 +651,17 @@ export function pastCustomersOfUser(db: Db, userId: number): { customer: Custome
     .filter((x) => x.customer && x.customer.owner_user_id !== userId);
 }
 
+// ---------- chats（チャット履歴：ユーザーごとに 1 本） ----------
+export function getChatTurns<T>(db: Db, userId: number | null): T[] {
+  const r = one<{ turns_json: string }>(db, "SELECT turns_json FROM chats WHERE user_id=?", userId ?? 0);
+  if (!r) return [];
+  try { return JSON.parse(r.turns_json) as T[]; } catch { return []; }
+}
+export function saveChatTurns<T>(db: Db, userId: number | null, turns: T[]): void {
+  db.prepare("INSERT INTO chats(user_id,turns_json,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET turns_json=excluded.turns_json, updated_at=excluded.updated_at").run(userId ?? 0, JSON.stringify(turns.slice(-60)), nowStamp());
+}
+export function clearChat(db: Db, userId: number | null): void {
+  db.prepare("DELETE FROM chats WHERE user_id=?").run(userId ?? 0);
+}
+
 export type { Row };
