@@ -1,4 +1,4 @@
-import { listCustomers, listVisits, stampOf } from "@eigyo/core";
+import { googleConfigured, listCustomers, listVisits, stampOf } from "@eigyo/core";
 import { db } from "@/lib/db";
 import { currentUser } from "@/lib/user";
 import { PageTitle } from "@/components/ui";
@@ -7,7 +7,8 @@ import { VisitsPanel } from "@/components/visits-panel";
 export const dynamic = "force-dynamic";
 
 /** 訪問予定（今日〜2 週間）。ホームの「次の訪問」への自動切替の元データ。 */
-export default async function VisitsPage() {
+export default async function VisitsPage({ searchParams }: { searchParams: Promise<{ google?: string; msg?: string }> }) {
+  const sp = await searchParams;
   const d = db();
   const me = await currentUser(d);
   const now = new Date();
@@ -16,7 +17,7 @@ export default async function VisitsPage() {
   return (
     <>
       <PageTitle title="訪問予定" sub={me ? `${me.name} の予定。訪問の 10 分前になるとホームが「次の訪問」に切り替わります（設定で変更可）。` : undefined} />
-      <VisitsPanel visits={visits} customers={listCustomers(d).map((c) => ({ id: c.id, short_name: c.short_name, name: c.name }))} icsUrl={me?.calendar_ics_url ?? null} />
+      <VisitsPanel visits={visits} customers={listCustomers(d).map((c) => ({ id: c.id, short_name: c.short_name, name: c.name }))} icsUrl={me?.calendar_ics_url ?? null} google={{ configured: googleConfigured(), connected: Boolean(me?.google_refresh_token), email: me?.google_email ?? null }} flash={sp.google ? { ok: sp.google === "ok", msg: sp.msg ?? "" } : null} />
     </>
   );
 }

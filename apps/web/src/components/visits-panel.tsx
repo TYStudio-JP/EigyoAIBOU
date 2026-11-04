@@ -9,7 +9,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 
 /** 訪問予定：今日〜2 週間の一覧、手入力、カレンダー（iCal URL）取り込み。 */
-export function VisitsPanel({ visits, customers, icsUrl }: { visits: VisitWithCustomer[]; customers: Pick<Customer, "id" | "short_name" | "name">[]; icsUrl: string | null }) {
+export function VisitsPanel({ visits, customers, icsUrl, google, flash }: { visits: VisitWithCustomer[]; customers: Pick<Customer, "id" | "short_name" | "name">[]; icsUrl: string | null; google: { configured: boolean; connected: boolean; email: string | null }; flash?: { ok: boolean; msg: string } | null }) {
   const router = useRouter();
   const [form, setForm] = useState({ date: todayStr(), time: "10:00", end: "", customer_id: "", title: "", place: "" });
   const [url, setUrl] = useState(icsUrl ?? "");
@@ -35,6 +35,15 @@ export function VisitsPanel({ visits, customers, icsUrl }: { visits: VisitWithCu
     try {
       const j: IcsSyncResult | { cleared: true } = await post("/api/visits/sync", mode === "url" ? { ics_url: url } : { ics_text: icsText });
       setMsg("cleared" in j ? "カレンダー連携を解除しました" : `取り込み：${j.fetched} 件（追加 ${j.created}・更新 ${j.updated}・削除 ${j.removed}、得意先を推定 ${j.matched} 件）${j.from.slice(0, 10)}〜${j.to.slice(0, 10)}`);
+      router.refresh();
+    } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(null); }
+  };
+  const gsync = async (method: "POST" | "DELETE") => {
+    setBusy("google"); setErr(null); setMsg(null);
+    try {
+      const r = await fetch("/api/google/sync", { method }); const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error ?? "失敗しました");
+      setMsg(method === "DELETE" ? "Google カレンダーの連携を解除しました（取り込んだ予定は残ります）" : `Google カレンダーから ${j.fetched} 件（追加 ${j.created}・更新 ${j.updated}・削除 ${j.removed}、得意先を推定 ${j.matched} 件）`);
       router.refresh();
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(null); }
   };
@@ -80,6 +89,16 @@ export function VisitsPanel({ visits, customers, icsUrl }: { visits: VisitWithCu
         )}
       </Card>
 
+      {flash && <p className={`text-sm ${flash.ok ? "text-ok" : "text-danger"}`}>{flash.msg}</p>}
+      <Card title="Google カレンダーと連携（OAuth）">
+        {!google.configured ? (
+          <p className="text-xs text-muted">管理者向け：Google Cloud で OAuth クライアント（ウェブ）を作り、リダイレクト URI に <code>{"{公開URL}"}/api/google/callback</code> を登録し、<code>.env</code> に <code>GOOGLE_CLIENT_ID</code> / <code>GOOGLE_CLIENT_SECRET</code> を設定して再起動すると、ここにボタンが出ます。設定しなくても下の iCal URL で取り込めます。</p>
+        ) : google.connected ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm"><span className="text-ok font-semibold">連携中</span><span className="text-xs text-muted">{google.email ?? ""}</span><Button size="sm" variant="primary" busy={busy === "google"} onClick={() => gsync("POST")}>今すぐ同期</Button><Button size="sm" variant="ghost" busy={busy === "google"} onClick={() => { if (confirm("Google カレンダーの連携を解除しますか？")) gsync("DELETE"); }}>解除</Button><span className="text-xs text-muted w-full">繰り返し予定も展開して取り込みます。読み取り専用で、カレンダーは変更しません。</span></div>
+        ) : (
+          <a href="/api/google/auth" className="inline-flex items-center rounded-md bg-brand text-brand-ink px-3.5 py-2 text-sm font-medium">Google カレンダーと連携する</a>
+        )}
+      </Card>
       <Card title="カレンダーから取り込む（Google カレンダー等の非公開 iCal URL）">
         <p className="text-xs text-muted mb-2">Google カレンダー → 設定 → 対象カレンダー → 「非公開 URL（iCal 形式）」をコピーして貼り付けます。予定のタイトル・場所に社名があれば得意先を自動で当てます（違えば上で選び直せます）。前後 1 週間〜30 日先まで取り込み、繰り返し予定は展開しません。</p>
         <div className="flex flex-wrap gap-2 items-center">

@@ -3,7 +3,8 @@
  * 事実は各ドメインの関数から決定的に集め、急ぎの順に並べる。
  */
 import type { Db } from "../db/connection";
-import { daysBetween, getCustomer, listCalls, listQuotes, today } from "./repo";
+import { daysBetween, getCustomer, listCalls, listInquiries, listQuotes, today } from "./repo";
+import { INQUIRY_KIND_LABEL } from "./types";
 import { followupQueue } from "./followup";
 import { deliveryWaitingList } from "./delivery";
 import { pendingFormalList } from "./provisional";
@@ -44,6 +45,11 @@ export function replyQueue(db: Db, opts: { userId?: number | null; asOf?: string
       const needs = c.minutes?.requests.filter((r) => r.result?.status === "needs_human") ?? [];
       if (needs.length) items.push({ kind: "call_needs_human", label: INBOX_KIND_LABEL.call_needs_human, customer: name, customer_id: c.customer_id, title: needs.map((r) => r.result!.headline).join(" / "), todo: "担当判断が要る依頼。決めたら確認メールを送るだけ", action: "確認する", url: `/calls/${c.id}`, since: c.updated_at, days: daysBetween(c.updated_at, asOf), amount: null, priority: 20 });
     }
+  }
+
+  for (const iq of listInquiries(db, { status: ["open"], limit: 100 })) {
+    if (!mine(iq.customer_id)) continue;
+    items.push({ kind: "inquiry_open", label: INBOX_KIND_LABEL.inquiry_open, customer: iq.customer?.short_name ?? "得意先未設定", customer_id: iq.customer_id, title: `${INQUIRY_KIND_LABEL[iq.kind]}：${iq.question.replace(/\s+/g, " ").slice(0, 60)}`, todo: "社内記録とウェブで回答文を作り、コピーして返すだけ", action: "回答を作る", url: `/inquiries/${iq.id}`, since: iq.created_at, days: daysBetween(iq.created_at, asOf), amount: null, priority: iq.due && iq.due <= asOf ? 12 : 15 });
   }
 
   for (const q of pendingFormalList(db)) {

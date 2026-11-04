@@ -7,6 +7,8 @@ const desktop = [
   { href: "/chat", label: "質問する", icon: "💬" },
   { href: "/calls", label: "電話メモ", icon: "☎" },
   { href: "/visits", label: "訪問予定", icon: "📅" },
+  { href: "/inquiries", label: "問い合わせ回答", icon: "❓" },
+  { href: "/products/photo", label: "写真で調べる", icon: "📷" },
   { href: "/deals", label: "案件", icon: "◆" },
   { href: "/quotes/new", label: "見積りを作る", icon: "✎" },
   { href: "/quotes", label: "見積り一覧", icon: "☰" },

@@ -40,8 +40,8 @@ export default async function Dashboard() {
       )}
       <HomeSwitch initialMode={home.mode} serverNow={now.getTime()} visits={todayVisits} switchMinutes={home.switch_minutes} inboxCount={inbox.length} brief={briefNode}
         inbox={<Card title={`返事待ち（${inbox.length}${inbox.length >= 8 ? "+" : ""}）`} action={<Link href="/inbox" className="text-xs text-brand hover:underline">すべて見る →</Link>}><InboxList items={inbox} /></Card>} />
-      <div className="lg:hidden grid grid-cols-4 gap-2 mb-4 text-center text-xs">
-        {[["/chat", "💬", "質問"], ["/quotes/new", "✎", "見積り"], ["/report", "✉", "日報"], ["/delivery", "⏱", "納期"]].map(([h, i, l]) => <Link key={h} href={h} className="rounded-lg bg-surface border border-line py-2.5"><div className="text-xl">{i}</div>{l}</Link>)}
+      <div className="lg:hidden grid grid-cols-3 gap-2 mb-4 text-center text-xs">
+        {[["/chat", "💬", "質問"], ["/quotes/new", "✎", "見積り"], ["/inquiries/new", "❓", "問い合わせ"], ["/products/photo", "📷", "写真で調べる"], ["/delivery", "⏱", "納期"], ["/report", "✉", "日報"]].map(([h, i, l]) => <Link key={h} href={h} className="rounded-lg bg-surface border border-line py-2.5"><div className="text-xl">{i}</div>{l}</Link>)}
       </div>
       <div className="mb-4"><TargetCard p={target} /></div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">

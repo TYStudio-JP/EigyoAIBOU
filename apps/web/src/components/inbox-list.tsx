@@ -6,6 +6,7 @@ import { yen } from "@/lib/format";
 const TONE: Record<InboxItem["kind"], string> = {
   call_open: "bg-amber-50 text-amber-800 border-amber-200",
   call_needs_human: "bg-blue-50 text-blue-700 border-blue-200",
+  inquiry_open: "bg-orange-50 text-orange-800 border-orange-200",
   provisional: "bg-amber-100 text-amber-900 border-amber-300",
   quote_draft: "bg-gray-100 text-gray-700 border-gray-200",
   delivery_waiting: "bg-purple-50 text-purple-700 border-purple-200",
