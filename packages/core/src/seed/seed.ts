@@ -1,7 +1,7 @@
 import type { Db } from "../db/connection";
 import { CONTACTS, CUSTOMERS, END_CUSTOMERS, INDUSTRY_AFFINITY, PRODUCTS, SUPPLIERS } from "./data";
 import {
-  addActivity, addDays, addSupplierPrice, createCall, createContact, createEndCustomer, createQuote, createUser, getSettings, listContacts, saveSettings, setCustomerOwner, setQuoteStatus, today, updateCall, updateDeal,
+  addActivity, addDays, addSupplierPrice, createCall, createContact, createEndCustomer, createInquiry, createQuote, createUser, createVisit, getSettings, listContacts, saveSettings, setCustomerOwner, setQuoteStatus, today, updateCall, updateDeal,
   upsertCustomer, upsertProduct, upsertSupplier, type NewQuoteItem,
 } from "../domain/repo";
 import { backfillDeals, listDealsForSeed } from "../domain/deals";
@@ -29,7 +29,8 @@ export function seedDatabase(db: Db, opts: SeedOptions = {}): { customers: numbe
   const between = (a: number, b: number) => a + rnd() * (b - a);
 
   // 外部キーの依存順に消す（子 → 親）。users は customers.owner_user_id から参照されるので最後。
-  db.exec("DELETE FROM customer_owners; DELETE FROM deal_events; DELETE FROM calls; DELETE FROM activities; DELETE FROM quote_items; DELETE FROM quotes; DELETE FROM deals; DELETE FROM end_customers; DELETE FROM contacts; DELETE FROM supplier_prices; DELETE FROM products; DELETE FROM suppliers; DELETE FROM customers; DELETE FROM users; DELETE FROM settings;");
+  // 外出先モードで増えた表（問い合わせ・訪問予定・横展開の済み・メール履歴・共有の一時保管）も先に消す。消し忘れると customers の削除が外部キーで失敗する
+  db.exec("DELETE FROM mail_log; DELETE FROM inquiries; DELETE FROM visits; DELETE FROM crosssell_dismissals; DELETE FROM share_inbox; DELETE FROM chats; DELETE FROM daily_reports; DELETE FROM customer_owners; DELETE FROM deal_events; DELETE FROM calls; DELETE FROM activities; DELETE FROM quote_items; DELETE FROM quotes; DELETE FROM deals; DELETE FROM end_customers; DELETE FROM contacts; DELETE FROM supplier_prices; DELETE FROM products; DELETE FROM suppliers; DELETE FROM customers; DELETE FROM users; DELETE FROM settings;");
   saveSettings(db, DEFAULT_SETTINGS);
 
   const customers = CUSTOMERS.map((c) => ({ ...upsertCustomer(db, c), discount: c.discount }));
@@ -233,6 +234,14 @@ export function seedDatabase(db: Db, opts: SeedOptions = {}): { customers: numbe
   // 引継ぎのデモ：日之出物流は田村（転勤）→ 山田 へ 3 か月前に引継ぎ済み
   const hinode = customers.find((c) => c.code === "C008")!;
   handoverCustomer(db, hinode.id, yamada.id, { at: `${addDays(asOf, -90)} 17:00:00`, note: "大阪支店へ転勤のため。年間契約の更新時期（1月）に注意。" });
+
+  // 外出先モードのデモ：返事待ちに出る問い合わせ 2 件と、今日の訪問予定 2 件（午前は済み、午後が「次の訪問」）
+  const midoriC = customers.find((c) => c.code === "C003")!;
+  const shonanC = customers.find((c) => c.code === "C006")!;
+  createInquiry(db, { user_id: yamada.id, customer_id: midoriC.id, contact_id: contactByName.get("C003:高橋 誠") ?? null, channel: "mail", kind: "equivalent", question: "みどり食品の高橋です。いま使っている耐切創手袋 HK-5L が廃番になると聞きました。同等品で食品工場で使えるものはありますか？ 価格も教えてください。", source: "seed", due: addDays(asOf, 1) });
+  createInquiry(db, { user_id: yamada.id, customer_id: shonanC.id, contact_id: contactByName.get("C006:渡辺 大輔") ?? null, channel: "line", kind: "delivery", question: "湘南建設 渡辺です。安全靴 HS-26 を 9 足、来週の月曜までに現場へ入れられますか？", source: "seed" });
+  createVisit(db, { user_id: yamada.id, customer_id: sagami.id, title: "相模電機 定期訪問", starts_at: `${asOf} 10:00`, ends_at: `${asOf} 11:00`, place: "本社", source: "manual" });
+  createVisit(db, { user_id: yamada.id, customer_id: tokai.id, title: "東海精密 第2ライン打合せ", starts_at: `${asOf} 15:00`, ends_at: `${asOf} 16:00`, place: "本社工場 会議室", source: "manual" });
 
   getSettings(db);
   return { customers: customers.length, suppliers: SUPPLIERS.length, products: products.length, quotes: made + 2 };

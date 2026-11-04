@@ -36,7 +36,7 @@ Built with Claude: Japan 2026 ハッカソン（テーマ #1「あなたにし�
 - `packages/core` — ドメインロジックと SQLite（`node:sqlite`、ネイティブモジュール不要）。価格エンジン `domain/pricing.ts`、横展開 `domain/crosssell.ts`、追跡 `domain/followup.ts`、Claude 連携 `ai/*.ts`、ダミーデータ `seed/*`。
 - `apps/web` — Next.js (App Router) の画面と API。クライアントコンポーネントは **`@eigyo/core/shared`**（型とラベルのみ）を import すること。`@eigyo/core` 本体は `node:sqlite` を含むのでサーバー側専用。
 - `packages/mcp-server` — 同じロジックを MCP ツールとして公開（`.mcp.json` で Claude Code に登録済み）。
-- `.claude/skills` — 見積り作成・追跡・横展開の手順スキル。`.claude/agents` — 価格監査・フォロー文面のサブエージェント。
+- `.claude/skills` — 見積り作成・追跡・横展開・問い合わせ回答（返事待ち・暫定回答を含む）の手順スキル。`.claude/agents` — 価格監査・フォロー文面のサブエージェント。
 
 ## コマンド
 - `npm install` → `npm run dev`（http://localhost:3000、初回起動時にダミーデータを自動投入）
