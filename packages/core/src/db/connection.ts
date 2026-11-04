@@ -73,6 +73,13 @@ function migrate(db: DatabaseSync): void {
   add("users", "target_margin", "REAL");
   add("users", "proxy_send_allowed", "INTEGER NOT NULL DEFAULT 0");
   add("quotes", "delivery_kind", "TEXT NOT NULL DEFAULT 'estimate'");
+  // 訪問予定（カレンダー）とメーカー回答
+  add("users", "calendar_ics_url", "TEXT");
+  add("quote_items", "supplier_quote_price", "REAL");
+  add("quote_items", "supplier_quote_valid_until", "TEXT");
+  add("quote_items", "supplier_quote_min_lot", "INTEGER");
+  add("quote_items", "supplier_quote_note", "TEXT");
+  add("quote_items", "supplier_quote_at", "TEXT");
 }
 
 export function dbExists(path: string = defaultDbPath()): boolean {

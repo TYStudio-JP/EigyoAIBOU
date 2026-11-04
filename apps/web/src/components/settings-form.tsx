@@ -53,6 +53,7 @@ export function SettingsForm({ initial, ai, users, meId, selfMail, templateRegis
           {field("followup_days_first", "提出後、最初のフォローまで（日）", "number")}
           {field("followup_days_repeat", "以降のフォロー間隔（日）", "number")}
           {field("quote_valid_days", "見積り有効期間（日）", "number")}
+          {field("brief_switch_minutes", "ホームを「次の訪問」に切り替える（訪問の何分前から）", "number")}
         </div>
       </Card>
       <Card title="ユーザー（自社の営業担当）— メール・月の目標・代理送付">

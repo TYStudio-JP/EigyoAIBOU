@@ -30,3 +30,6 @@ export type { SelfMailPackage } from "./domain/self-mail";
 export type { TargetProgress, TargetCandidate } from "./domain/targets";
 export type { ImportKind, ImportField, ImportPreview, ImportResult } from "./domain/import";
 export { IMPORT_KIND_LABEL } from "./domain/import";
+export type { IcsEvent, IcsSyncResult, NextVisit, HomeMode } from "./domain/visits";
+export { stampOf, dateOf } from "./domain/visits";
+export type { SupplierQuoteInput, SupplierQuoteResult, SupplierReplyFields } from "./domain/supplier-quote";

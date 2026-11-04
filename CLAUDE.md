@@ -23,6 +23,8 @@ Built with Claude: Japan 2026 ハッカソン（テーマ #1「あなたにし�
 12. **目標と実績**（`domain/targets.ts`）— ユーザーごとの月目標（`users.target_sales/target_margin`）に対する受注実績・あといくら・金額順に何件で届くか。ホームの「今月の目標」。
 13. **マスタ CSV 取り込み**（`domain/import.ts`）— 得意先・仕入れ先・商品・仕入れ価格・売上実績。UTF-8／Shift_JIS 自動判定、列名の同義語で自動対応、対応は `settings` に保存。**未対応の列は既存値を保つ**。売上実績は受注済み見積り（`source_type: import`）として入る。
 14. **横展開の済み**（`crosssell_dismissals`）、**概算／確定納期**（`quotes.delivery_kind`、受注後に全明細の回答が揃うと自動で確定）、**代理送付**（`users.proxy_send_allowed`。`proxySendPreconditions` で許可・SMTP・宛先を検証し、画面の明示的な確認が無ければ送らない。`mail_log` に履歴）、**自社書式テンプレート**（`data/templates/quote_template.xlsx`、`{{キー}}` 差し込み、`{{item.*}}` 行を複製。`sampleQuoteTemplate` が土台）、**印刷・PDF** は `/quotes/[id]/print`。
+15. **訪問予定とホームの自動切替**（`domain/visits.ts`）— `visits` テーブル（手入力 or カレンダー）。`parseIcs` は折り返し・TZID・UTC・終日・CANCELLED に対応、RRULE は展開しない。`syncIcsFromUrl` は https のみ・社内アドレス不可。`matchCustomerByText` で予定のタイトル・場所から得意先を推定（手で直した紐づけは再同期でも保つ）。`homeMode` は次の訪問まで `settings.brief_switch_minutes`（既定 10）以内か訪問中なら `brief`。画面は `components/home-switch.tsx`（`useSyncExternalStore` で 1 分刻み。描画中に `Date.now()` を呼ばない）＋ `brief-compact.tsx`、`/visits`。
+16. **メーカー回答の入力→自動値付け**（`domain/supplier-quote.ts`）— 明細に仕入れ単価・納期・有効期限・最小ロットを記録（`quote_items.supplier_quote_*`、cost を更新、`supplier_prices` にも履歴追加、納期は `recordSupplierDelivery` 経由）。`apply_rule` で得意先ルールの売単価に更新。回答メールの読み取りは `ai/supplier-reply.ts`、AI 無しは `extractSupplierReplyFallback`。
 
 **スマホが主役。** 画面は下タブ＋大きなボタンのスマホ優先レイアウト（`lg:` 以上でサイドバー）。マスタ登録・設定はデスクトップのみ。外出先からは `npm run tunnel`（Cloudflare）＋ `EIGYO_ACCESS_KEY`（`apps/web/src/proxy.ts`）。
 

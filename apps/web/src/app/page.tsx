@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { dashboardStats, dealsToMove, followupQueue, listCalls, listQuotes, lostReasonStats, hasApiKey, replyQueue, targetProgress, LOST_REASON_LABEL, type LostReason } from "@eigyo/core";
+import { dashboardStats, dealsToMove, followupQueue, homeMode, listCalls, listQuotes, listVisits, lostReasonStats, hasApiKey, replyQueue, stampOf, targetProgress, visitBrief, LOST_REASON_LABEL, type LostReason } from "@eigyo/core";
+import { HomeSwitch } from "@/components/home-switch";
+import { BriefCompact } from "@/components/brief-compact";
 import { InboxList } from "@/components/inbox-list";
 import { TargetCard } from "@/components/target-card";
 import { currentUser } from "@/lib/user";
@@ -23,6 +25,12 @@ export default async function Dashboard() {
   const ai = hasApiKey();
   const inbox = replyQueue(d, { userId: me?.id ?? null, limit: 8 });
   const target = targetProgress(d, { userId: me?.id ?? null });
+  const now = new Date();
+  const home = homeMode(d, me?.id ?? null, now);
+  const dayEnd = stampOf(now).slice(0, 10) + " 23:59";
+  const todayVisits = listVisits(d, { userId: me?.id ?? null, from: stampOf(now).slice(0, 10) + " 00:00", to: dayEnd });
+  const nextCustomerId = home.next?.visit.customer_id ?? null;
+  const briefNode = nextCustomerId ? <BriefCompact brief={visitBrief(d, nextCustomerId)} aiEnabled={ai} headline={<div className="rounded-lg bg-brand text-brand-ink px-3 py-2 text-sm"><div className="text-xs opacity-80">{home.next!.in_progress ? "訪問中" : `あと ${home.next!.minutes_until} 分`}・{home.next!.visit.starts_at.slice(11, 16)}</div><div className="font-bold text-base">{home.next!.visit.customer?.name ?? home.next!.visit.title}</div>{home.next!.visit.place && <div className="text-xs opacity-80">{home.next!.visit.place}</div>}</div>} /> : null;
   const calls = listCalls(d, { limit: 50 }).filter((c) => c.status === "open" || (c.status === "processed" && c.minutes?.requests.some((r) => r.result?.status === "needs_human")));
   return (
     <>
@@ -30,9 +38,8 @@ export default async function Dashboard() {
       {!ai && (
         <div className="mb-4 rounded-md border border-line bg-surface px-4 py-2 text-xs text-muted flex items-center justify-between"><span>AI 機能は未接続です</span><Link href="/settings" className="text-brand hover:underline">設定で接続</Link></div>
       )}
-      <Card className="mb-4" title={`返事待ち（${inbox.length}${inbox.length >= 8 ? "+" : ""}）`} action={<Link href="/inbox" className="text-xs text-brand hover:underline">すべて見る →</Link>}>
-        <InboxList items={inbox} />
-      </Card>
+      <HomeSwitch initialMode={home.mode} serverNow={now.getTime()} visits={todayVisits} switchMinutes={home.switch_minutes} inboxCount={inbox.length} brief={briefNode}
+        inbox={<Card title={`返事待ち（${inbox.length}${inbox.length >= 8 ? "+" : ""}）`} action={<Link href="/inbox" className="text-xs text-brand hover:underline">すべて見る →</Link>}><InboxList items={inbox} /></Card>} />
       <div className="lg:hidden grid grid-cols-4 gap-2 mb-4 text-center text-xs">
         {[["/chat", "💬", "質問"], ["/quotes/new", "✎", "見積り"], ["/report", "✉", "日報"], ["/delivery", "⏱", "納期"]].map(([h, i, l]) => <Link key={h} href={h} className="rounded-lg bg-surface border border-line py-2.5"><div className="text-xl">{i}</div>{l}</Link>)}
       </div>
