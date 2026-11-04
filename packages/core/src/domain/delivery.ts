@@ -1,6 +1,7 @@
 import type { Db } from "../db/connection";
 import type { QuoteWithItems } from "./types";
 import { addActivity, addDays, getQuote, listQuotes, setDeliveryKind, today, updateQuoteHeader } from "./repo";
+import { repSurname } from "./rep-name";
 import { DELIVERY_KIND_LABEL, type DeliveryKind } from "./types";
 
 /** 回答納期を「概算（注文前）」「確定（注文後）」に切り替える。 */
@@ -41,6 +42,6 @@ export function recordSupplierDelivery(db: Db, quoteId: number, itemId: number, 
 export function deliveryNotice(q: QuoteWithItems, company: string, rep: string): { subject: string; body: string; late: boolean } {
   const late = Boolean(q.requested_delivery && q.promised_delivery && q.promised_delivery > q.requested_delivery);
   const lines = q.items.map((it) => `・${it.description} × ${it.qty}${it.unit}：${it.supplier_delivery ? `${it.supplier_delivery.replace(/-/g, "/")} 納品予定` : "納期確認中"}`);
-  const body = `${q.customer.name}\n${q.customer.contact_name ? q.customer.contact_name + " 様" : "ご担当者様"}\n\nいつもお世話になっております。${company} ${rep.split(" ").pop()}です。\nお見積り ${q.quote_no}「${q.subject}」の納期についてご連絡いたします。\n\n${lines.join("\n")}\n\n${q.promised_delivery ? `全数の納品予定は ${q.promised_delivery.replace(/-/g, "/")} です。` : ""}${late ? `\nご希望の ${q.requested_delivery!.replace(/-/g, "/")} に間に合わず申し訳ございません。分納や代替品のご提案も可能ですので、ご都合をお聞かせください。` : q.requested_delivery ? `\nご希望の ${q.requested_delivery.replace(/-/g, "/")} に間に合う見込みです。` : ""}\n\nよろしくお願いいたします。\n\n${company} ${rep}`;
+  const body = `${q.customer.name}\n${q.customer.contact_name ? q.customer.contact_name + " 様" : "ご担当者様"}\n\nいつもお世話になっております。${company}の${repSurname(rep)}です。\nお見積り ${q.quote_no}「${q.subject}」の納期についてご連絡いたします。\n\n${lines.join("\n")}\n\n${q.promised_delivery ? `全数の納品予定は ${q.promised_delivery.replace(/-/g, "/")} です。` : ""}${late ? `\nご希望の ${q.requested_delivery!.replace(/-/g, "/")} に間に合わず申し訳ございません。分納や代替品のご提案も可能ですので、ご都合をお聞かせください。` : q.requested_delivery ? `\nご希望の ${q.requested_delivery.replace(/-/g, "/")} に間に合う見込みです。` : ""}\n\nよろしくお願いいたします。\n\n${company} ${rep}`;
   return { subject: `【納期のご連絡】${q.subject}（${q.quote_no}）`, body, late };
 }

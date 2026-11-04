@@ -1,3 +1,4 @@
+import { repSurname } from "../domain/rep-name";
 import { z } from "zod";
 import { betaZodOutputFormat as zodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { AiUnavailableError, FALLBACK_BETAS, MODEL, SYSTEM_BASE, getClient, hasApiKey } from "./client";
@@ -66,7 +67,7 @@ export async function composeCallConfirmation(call: CallWithCustomer, minutes: C
     system: [{ type: "text", text: SYSTEM_BASE + "\n\nいまの役割: 電話の内容を得意先に書面で確認するメール。『お電話の件、以下の通り承りました』の形で、依頼ごとに結果（単価・納期・見積番号）を箇条書きにする。担当確認中の項目は回答予定を明記。数字は与えられたものだけを使い、作らない。200〜400 字。", cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content: `本日: ${today}　通話: ${call.started_at}
 宛先: ${c ? `${c.name} ${c.contact_name ?? ""} 様` : "得意先"}（${minutes.counterpart ?? ""}）
-自社: ${settings.company_name} ${settings.sales_rep}
+自社: ${settings.company_name} ${settings.sales_rep}（名乗りは「${repSurname(settings.sales_rep)}」）
 議事録:
 ${minutes.summary}
 依頼と結果:

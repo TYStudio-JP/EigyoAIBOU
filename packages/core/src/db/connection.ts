@@ -57,6 +57,8 @@ function migrate(db: DatabaseSync): void {
   add("quotes", "deal_id", "INTEGER REFERENCES deals(id)");
   add("calls", "contact_id", "INTEGER REFERENCES contacts(id)");
   add("calls", "deal_id", "INTEGER REFERENCES deals(id)");
+  add("calls", "process_state", "TEXT");
+  add("calls", "process_error", "TEXT");
   // 値付けルール（掛率／粗利／端数）と暫定回答（正式未送付）— スマホ外出先モード
   add("customers", "pricing_mode", "TEXT NOT NULL DEFAULT 'none'");
   add("customers", "markup_rate", "REAL");

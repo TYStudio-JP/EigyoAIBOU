@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { dealTimeline, getDeal, hasApiKey, listContacts, listDeals, listEndCustomers } from "@eigyo/core";
+import { dealTimeline, getDeal, hasApiKey, listContacts, listDeals, listEndCustomers, listQuotes } from "@eigyo/core";
 import { db } from "@/lib/db";
 import { DealDetail } from "@/components/deal-detail";
 
@@ -18,6 +18,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
       endCustomers={listEndCustomers(d, deal.customer_id)}
       siblings={listDeals(d, { customerId: deal.customer_id, openOnly: true, limit: 50 }).map((x) => ({ id: x.id, title: x.title }))}
       aiEnabled={hasApiKey()}
+      quoteIds={Object.fromEntries(listQuotes(d, { customerId: deal.customer_id, limit: 300 }).map((q) => [q.quote_no, q.id]))}
     />
   );
 }

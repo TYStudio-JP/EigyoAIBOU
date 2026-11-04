@@ -1,3 +1,4 @@
+import { timelineLine } from "../domain/deals";
 import { z } from "zod";
 import { betaZodOutputFormat as zodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { AiUnavailableError, FALLBACK_BETAS, MODEL, SYSTEM_BASE, getClient, hasApiKey } from "./client";
@@ -42,7 +43,7 @@ const SummarySchema = z.object({
 /** 案件の「ここまでの経緯と今の状況」を書き直す。 */
 export async function writeDealSummary(deal: DealWithRefs, timeline: TimelineItem[], today: string): Promise<z.infer<typeof SummarySchema>> {
   if (!hasApiKey()) throw new AiUnavailableError();
-  const tl = timeline.slice(0, 25).reverse().map((t) => `${t.at.slice(0, 16)} [${t.title}] ${t.body}`).join("\n");
+  const tl = timeline.slice(0, 25).reverse().map(timelineLine).join("\n");
   const res = await getClient().beta.messages.parse({
     model: MODEL,
     max_tokens: 2500,

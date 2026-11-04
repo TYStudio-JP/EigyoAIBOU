@@ -5,6 +5,7 @@
 import type { Db } from "../db/connection";
 import { PROVISIONAL_CHANNEL_LABEL, type ProvisionalChannel, type QuoteWithItems, type Settings } from "./types";
 import { addActivity, getQuote, listQuotes, nowStamp, type QuoteSummary } from "./repo";
+import { repSurname } from "./rep-name";
 
 export interface ProvisionalSnapshotItem { description: string; qty: number; unit: string; unit_price: number }
 
@@ -13,7 +14,7 @@ const yen = (n: number) => `${Math.round(n).toLocaleString("ja-JP")}円`;
 
 /** SMS・LINE・口頭用の短い暫定回答文（決定的テンプレート。数字は見積りの値のみ）。 */
 export function provisionalText(q: QuoteWithItems, settings: Settings, channel: ProvisionalChannel = "sms"): string {
-  const rep = settings.sales_rep.split(" ").pop() ?? settings.sales_rep;
+  const rep = repSurname(settings.sales_rep);
   const greeting = channel === "phone" ? "（電話で伝える内容）" : `${q.customer.contact_name ? q.customer.contact_name + " 様" : "ご担当者様"}\nお世話になっております。${settings.company_name}の${rep}です。`;
   const lines = q.items.map((it) => `・${it.description} ${it.qty}${it.unit}：@${yen(it.unit_price)}${it.supplier_delivery ? `（納期 ${jp(it.supplier_delivery)}）` : ""}`);
   const delivery = q.promised_delivery ? `納期：${jp(q.promised_delivery)} 予定` : q.requested_delivery ? `納期：ご希望 ${jp(q.requested_delivery)} で確認中` : "納期：確認中";

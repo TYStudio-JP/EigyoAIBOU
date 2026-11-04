@@ -23,6 +23,7 @@ export type { VisitBriefAi } from "./ai/brief";
 export type { ChatTurn, ChatResult } from "./ai/chat";
 export type { ResearchResult } from "./ai/research";
 export { floorTo, resolvePricingRule, rulePrice } from "./domain/pricing-rule";
+export { repSurname, repFullName } from "./domain/rep-name";
 export type { PricingRule } from "./domain/pricing-rule";
 export type { InboxItem } from "./domain/inbox";
 export type { FormalDiff, ProvisionalSnapshotItem } from "./domain/provisional";

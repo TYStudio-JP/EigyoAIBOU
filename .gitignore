@@ -13,3 +13,6 @@ Thumbs.db
 apps/web/AGENTS.md
 data/templates/
 video/
+
+# Claude Code 個人設定
+.claude/settings.local.json
