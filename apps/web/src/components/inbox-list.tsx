@@ -15,7 +15,7 @@ const TONE: Record<InboxItem["kind"], string> = {
 
 /** 返事待ちの一覧（サーバーコンポーネント）。各行に「あと何をすれば返せるか」と次アクション 1 つ。 */
 export function InboxList({ items, compact = false }: { items: InboxItem[]; compact?: boolean }) {
-  if (items.length === 0) return <Empty>返事待ちはありません。いまは訪問に集中できます。</Empty>;
+  if (items.length === 0) return <Empty>返事待ちなし</Empty>;
   return (
     <ul className="divide-y divide-line">
       {items.map((it, i) => (

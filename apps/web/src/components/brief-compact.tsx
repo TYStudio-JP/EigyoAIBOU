@@ -22,7 +22,7 @@ export function BriefCompact({ brief, aiEnabled, headline }: { brief: VisitBrief
       <section className="rounded-lg border border-line bg-surface p-3">
         <div className="flex items-center justify-between gap-2 mb-1">
           <div className="font-semibold">話すこと</div>
-          <Button size="sm" variant="primary" busy={busy} onClick={run} disabled={!aiEnabled} title={aiEnabled ? "" : "設定で AI を接続すると使えます"}>5 行にまとめる</Button>
+          <Button size="sm" variant="primary" busy={busy} onClick={run} disabled={!aiEnabled}>要約</Button>
         </div>
         {ai ? (
           <div className="space-y-1.5">
@@ -32,7 +32,7 @@ export function BriefCompact({ brief, aiEnabled, headline }: { brief: VisitBrief
             <div className="rounded bg-blue-50 border border-blue-200 px-2 py-1.5 text-xs text-blue-900">持ち帰る: {ai.ask}</div>
           </div>
         ) : (
-          <ol className="list-decimal pl-5 space-y-0.5">{brief.talking_points.slice(0, 5).map((p, i) => <li key={i}>{p}</li>)}{brief.talking_points.length === 0 && <li className="list-none text-muted">話題の材料がまだありません</li>}</ol>
+          <ol className="list-decimal pl-5 space-y-0.5">{brief.talking_points.slice(0, 5).map((p, i) => <li key={i}>{p}</li>)}{brief.talking_points.length === 0 && <li className="list-none text-muted">なし</li>}</ol>
         )}
         {err && <p className="text-xs text-danger mt-1">{err}</p>}
         {brief.handover_notes.length > 0 && <div className="mt-1.5 text-xs text-purple-700">前任者の申し送り: {brief.handover_notes.join(" / ")}</div>}
@@ -57,14 +57,14 @@ export function BriefCompact({ brief, aiEnabled, headline }: { brief: VisitBrief
 
       <section className="rounded-lg border border-line bg-surface p-3">
         <div className="font-semibold mb-1">担当者</div>
-        <ul className="space-y-0.5">{brief.contacts.filter((k) => k.status === "在籍").slice(0, 4).map((k) => <li key={k.id} className="flex items-center gap-2"><span className="font-medium">{k.name}</span><span className="text-xs text-muted">{k.department} {k.title}</span>{k.mobile && <a href={`tel:${k.mobile}`} className="ml-auto text-xs text-brand">☎ {k.mobile}</a>}</li>)}{brief.contacts.length === 0 && <li className="text-muted text-xs">未登録（名刺を撮って追加）</li>}</ul>
+        <ul className="space-y-0.5">{brief.contacts.filter((k) => k.status === "在籍").slice(0, 4).map((k) => <li key={k.id} className="flex items-center gap-2"><span className="font-medium">{k.name}</span><span className="text-xs text-muted">{k.department} {k.title}</span>{k.mobile && <a href={`tel:${k.mobile}`} className="ml-auto text-xs text-brand">☎ {k.mobile}</a>}</li>)}{brief.contacts.length === 0 && <li className="text-muted text-xs">未登録</li>}</ul>
       </section>
 
       <section className="grid grid-cols-2 gap-2 text-xs">
         <div className="rounded-lg border border-line bg-surface p-3"><div className="font-semibold mb-1">定番の購入品</div><ul className="space-y-0.5">{brief.staples.slice(0, 4).map((s, i) => <li key={i} className="flex justify-between gap-1"><span className="truncate">{s.name}</span><span className="num text-muted shrink-0">{yen(s.last_price)}</span></li>)}{brief.staples.length === 0 && <li className="text-muted">なし</li>}</ul></div>
         <div className="rounded-lg border border-line bg-surface p-3"><div className="font-semibold mb-1">横展開のネタ</div><ul className="space-y-0.5">{brief.cross_sell.slice(0, 3).map((x) => <li key={x.code} className="truncate">{x.name}</li>)}{brief.cross_sell.length === 0 && <li className="text-muted">なし</li>}</ul>{brief.recent_lost[0] && <div className="mt-1 text-danger">失注 {brief.recent_lost[0].at}：{brief.recent_lost[0].reason}</div>}</div>
       </section>
-      <div className="text-right"><Link href={`/customers/${c.id}/brief`} className="text-xs text-brand">詳しいブリーフ →</Link></div>
+      <div className="text-right"><Link href={`/customers/${c.id}/brief`} className="text-xs text-brand">詳細 →</Link></div>
     </div>
   );
 }

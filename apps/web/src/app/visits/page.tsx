@@ -16,7 +16,7 @@ export default async function VisitsPage({ searchParams }: { searchParams: Promi
   const visits = listVisits(d, { userId: me?.id ?? null, from: stampOf(now).slice(0, 10) + " 00:00", to: stampOf(to).slice(0, 10) + " 23:59" });
   return (
     <>
-      <PageTitle title="訪問予定" sub={me ? `${me.name} の予定。訪問の 10 分前になるとホームが「次の訪問」に切り替わります（設定で変更可）。` : undefined} />
+      <PageTitle title="訪問予定" />
       <VisitsPanel visits={visits} customers={listCustomers(d).map((c) => ({ id: c.id, short_name: c.short_name, name: c.name }))} icsUrl={me?.calendar_ics_url ?? null} google={{ configured: googleConfigured(), connected: Boolean(me?.google_refresh_token), email: me?.google_email ?? null }} flash={sp.google ? { ok: sp.google === "ok", msg: sp.msg ?? "" } : null} />
     </>
   );

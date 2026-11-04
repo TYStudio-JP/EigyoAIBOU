@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, statusBarStyle: "default", title: "営業AI棒" },
   icons: { apple: "/apple-icon.png" },
 };
-export const viewport: Viewport = { themeColor: "#1f4e8c", width: "device-width", initialScale: 1, viewportFit: "cover" };
+export const viewport: Viewport = { themeColor: "#1f4e8c", width: "device-width", initialScale: 1, maximumScale: 1, viewportFit: "cover" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen">
         <div className="lg:flex min-h-screen">
           <Nav />
-          <main className="flex-1 min-w-0 px-4 pt-4 pb-24 lg:px-10 lg:py-6">{children}</main>
+          <main className="flex-1 min-w-0 overflow-x-hidden px-4 pt-4 pb-24 lg:px-10 lg:py-6">{children}</main>
         </div>
       </body>
     </html>

@@ -43,7 +43,7 @@ export function HomeSwitch({ initialMode, serverNow, visits, switchMinutes, inbo
       {/* 今日の訪問タイムライン */}
       <div className="flex items-center gap-2 overflow-x-auto text-xs pb-0.5">
         <span className="shrink-0 text-muted">今日の訪問</span>
-        {todayList.length === 0 && <Link href="/visits" className="shrink-0 rounded-full border border-dashed border-line px-2.5 py-1 text-muted">予定なし ＋追加</Link>}
+        {todayList.length === 0 && <Link href="/visits" className="shrink-0 rounded-full border border-dashed border-line px-2.5 py-1 text-muted">＋追加</Link>}
         {todayList.map((v) => {
           const isNext = next?.v.id === v.id;
           const past = dateOf(v.starts_at).getTime() < nowMs && !isNext;
@@ -57,7 +57,7 @@ export function HomeSwitch({ initialMode, serverNow, visits, switchMinutes, inbo
           <button type="button" onClick={() => setManual("inbox")} className={`rounded-md py-1.5 ${mode === "inbox" ? "bg-brand text-brand-ink font-semibold" : "text-muted"}`}>返事待ち{inboxCount ? `（${inboxCount}）` : ""}</button>
           <button type="button" onClick={() => setManual("brief")} disabled={!brief} className={`rounded-md py-1.5 ${mode === "brief" ? "bg-brand text-brand-ink font-semibold" : "text-muted"} disabled:opacity-40`}>次の訪問{next ? (next.inProgress ? "（訪問中）" : next.minutes <= 120 ? `（あと ${next.minutes} 分）` : `（${next.v.starts_at.slice(11, 16)}）`) : ""}</button>
         </div>
-        {manual && manual !== auto && <button type="button" className="text-[11px] text-brand" onClick={() => setManual(null)}>自動に戻す</button>}
+        {manual && manual !== auto && <button type="button" className="text-[11px] text-brand" onClick={() => setManual(null)}>自動</button>}
       </div>
       {mode === "brief" && brief ? brief : inbox}
     </div>

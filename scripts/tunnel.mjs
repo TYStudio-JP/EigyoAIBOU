@@ -24,9 +24,9 @@ const onData = (buf) => {
   if (m) {
     console.log("\n==============================================");
     console.log(`スマホで開く URL（初回はこの URL でアクセスキーを渡す）:`);
-    console.log(key ? `${m[0]}/?key=${key}` : m[0]);
+    console.log(key ? `${m[0]}/?key=${encodeURIComponent(key)}` : m[0]);
     console.log(`Android の MacroDroid に設定する URL:`);
-    console.log(`${m[0]}/api/calls/incoming?tel=[call_number]&duration=[call_duration]&direction=in${key ? `&key=${key}` : ""}`);
+    console.log(`${m[0]}/api/calls/incoming?tel=[call_number]&duration=[call_duration]&direction=in${key ? `&key=${encodeURIComponent(key)}` : ""}`);
     console.log("==============================================\n");
   }
 };

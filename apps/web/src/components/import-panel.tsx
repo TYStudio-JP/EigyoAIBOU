@@ -30,16 +30,14 @@ export function ImportPanel() {
   const missing = preview ? preview.fields.filter((f) => f.required && !mapping[f.key]) : [];
   return (
     <div className="text-sm space-y-3">
-      <p className="text-xs text-muted">基幹システムや名刺アプリの CSV（UTF-8／Shift_JIS、タブ区切りも可）を取り込みます。コードが一致すれば更新、無ければ追加。既存データは消しません。列名は会社ごとに違うので、初回に対応を確認すると次回から自動で当たります。</p>
       <div className="grid sm:grid-cols-3 gap-3 items-end">
         <div><label className={labelCls}>取り込むもの</label><select className={inputCls} value={kind} onChange={(e) => { setKind(e.target.value as ImportKind); setPreview(null); setResult(null); }}>{(Object.keys(IMPORT_KIND_LABEL) as ImportKind[]).map((k) => <option key={k} value={k}>{IMPORT_KIND_LABEL[k]}</option>)}</select></div>
         <div><label className={labelCls}>CSV ファイル</label><input type="file" accept=".csv,.txt,.tsv,text/csv" className="text-xs" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setPreview(null); setResult(null); }} /></div>
-        <div><Button variant="primary" busy={busy === "preview"} onClick={() => send("preview")} disabled={!file}>① 読み込んで列を確認</Button></div>
+        <div><Button variant="primary" busy={busy === "preview"} onClick={() => send("preview")} disabled={!file}>読み込む</Button></div>
       </div>
-      {kind === "sales" && <p className="text-xs text-muted">売上実績は「受注済みの見積り」として入ります。得意先・商品のマスタを先に取り込んでください（コードで突き合わせます）。</p>}
       {preview && (
         <div className="rounded-md border border-line p-3 space-y-3">
-          <div className="text-xs text-muted">{preview.total} 行を検出。各項目にどの列を使うか確認してください（必須: ＊）。</div>
+          <div className="text-xs text-muted">{preview.total} 行（＊は必須）</div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {preview.fields.map((f) => (
               <div key={f.key}>
@@ -56,8 +54,8 @@ export function ImportPanel() {
               <tbody>{preview.sample.map((r, i) => <tr key={i}>{preview.headers.map((_, j) => <td key={j} className="px-2 py-1 whitespace-nowrap border-b border-line">{r[j] ?? ""}</td>)}</tr>)}</tbody></table>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="primary" busy={busy === "commit"} onClick={() => send("commit")} disabled={missing.length > 0}>② この対応で取り込む</Button>
-            {missing.length > 0 && <span className="text-xs text-danger">必須の列が未対応: {missing.map((f) => f.label).join("、")}</span>}
+            <Button variant="primary" busy={busy === "commit"} onClick={() => send("commit")} disabled={missing.length > 0}>取り込む</Button>
+            {missing.length > 0 && <span className="text-xs text-danger">未対応: {missing.map((f) => f.label).join("、")}</span>}
           </div>
         </div>
       )}

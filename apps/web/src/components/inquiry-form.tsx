@@ -25,7 +25,7 @@ export function InquiryForm({ customers, initialText = "", initialCustomerId = n
   return (
     <Card>
       <div className="space-y-3">
-        <VoiceInput value={text} onChange={setText} placeholder="例: 御社から買っている耐切創手袋 HK-5L の M サイズはありますか？ 納期も教えてください" rows={6} />
+        <VoiceInput value={text} onChange={setText} placeholder="問い合わせの内容（貼り付け・音声）" rows={6} />
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
           <div><label className={labelCls}>得意先</label><select className={inputCls} value={customerId} onChange={(e) => setCustomerId(e.target.value)}><option value="">— 文面から推定 —</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.short_name}</option>)}</select></div>
           <div><label className={labelCls}>届いた手段</label><select className={inputCls} value={channel} onChange={(e) => setChannel(e.target.value as InquiryChannel)}>{(Object.keys(INQUIRY_CHANNEL_LABEL) as InquiryChannel[]).map((k) => <option key={k} value={k}>{INQUIRY_CHANNEL_LABEL[k]}</option>)}</select></div>

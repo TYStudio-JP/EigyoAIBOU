@@ -21,7 +21,6 @@ export function SupplierRules({ suppliers }: { suppliers: Supplier[] }) {
   };
   return (
     <div className="text-sm">
-      <p className="text-xs text-muted mb-2">仕入れ先の回答単価にこの掛率を掛けた価格を「いつものベース」にします（得意先に掛率・粗利の設定があればそちらを優先）。空欄なら未設定。</p>
       <table className="w-full">
         <thead className="text-xs text-muted"><tr><th className="text-left font-normal py-1">仕入れ先</th><th className="text-left font-normal">ルート</th><th className="text-right font-normal">リードタイム</th><th className="text-right font-normal w-32">標準掛率</th><th className="w-16" /></tr></thead>
         <tbody>

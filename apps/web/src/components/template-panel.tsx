@@ -15,7 +15,7 @@ export function TemplatePanel({ registered }: { registered: boolean }) {
     const fd = new FormData(); fd.append("file", file);
     const r = await fetch("/api/templates/quote", { method: "POST", body: fd });
     const j = await r.json().catch(() => ({}));
-    setBusy(null); setMsg(r.ok ? "テンプレートを登録しました。以後の Excel 見積書はこの書式で出ます。" : j.error ?? "失敗しました");
+    setBusy(null); setMsg(r.ok ? "登録しました" : j.error ?? "失敗しました");
     if (r.ok) router.refresh();
   };
   const remove = async () => {
@@ -25,16 +25,12 @@ export function TemplatePanel({ registered }: { registered: boolean }) {
   };
   return (
     <div className="text-sm space-y-3">
-      <p>状態: {registered ? <span className="text-ok font-semibold">自社書式を登録済み</span> : <span className="text-muted">既定書式（一般的な商社書式）</span>}</p>
-      <ol className="text-xs text-muted list-decimal pl-5 space-y-0.5">
-        <li><a href="/api/templates/quote?sample=1" className="text-brand hover:underline">サンプル xlsx をダウンロード</a>して Excel で開く。</li>
-        <li>セルの <code>{"{{quote_no}}"}</code> <code>{"{{customer.name}}"}</code> <code>{"{{total}}"}</code> などが差し込み位置。自社の書式に合わせてセルを動かし、ロゴや印影・罫線を足す。明細は <code>{"{{item.description}}"}</code> などを含む 1 行が明細数だけ複製される。</li>
-        <li>保存してここから登録。</li>
-      </ol>
+      <p>{registered ? <span className="text-ok font-semibold">自社書式</span> : <span className="text-muted">既定書式</span>}</p>
+      <p className="text-xs"><a href="/api/templates/quote?sample=1" className="text-brand hover:underline">サンプル xlsx</a>　差し込み: <code>{"{{quote_no}}"}</code> <code>{"{{customer.name}}"}</code> <code>{"{{item.description}}"}</code> …</p>
       <div className="flex flex-wrap items-center gap-2">
         <input type="file" accept=".xlsx" className="text-xs" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         <Button size="sm" variant="primary" busy={busy === "up"} disabled={!file} onClick={upload}>登録</Button>
-        {registered && <><a href="/api/templates/quote?download=1" className="text-xs text-brand hover:underline">登録中のテンプレートをダウンロード</a><Button size="sm" variant="ghost" busy={busy === "rm"} onClick={remove}>削除して既定に戻す</Button></>}
+        {registered && <><a href="/api/templates/quote?download=1" className="text-xs text-brand hover:underline">ダウンロード</a><Button size="sm" variant="ghost" busy={busy === "rm"} onClick={remove}>既定に戻す</Button></>}
       </div>
       {msg && <p className="text-xs text-muted">{msg}</p>}
     </div>

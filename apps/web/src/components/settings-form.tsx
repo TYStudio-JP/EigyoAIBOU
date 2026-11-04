@@ -53,10 +53,10 @@ export function SettingsForm({ initial, ai, users, meId, selfMail, templateRegis
           {field("followup_days_first", "提出後、最初のフォローまで（日）", "number")}
           {field("followup_days_repeat", "以降のフォロー間隔（日）", "number")}
           {field("quote_valid_days", "見積り有効期間（日）", "number")}
-          {field("brief_switch_minutes", "ホームを「次の訪問」に切り替える（訪問の何分前から）", "number")}
+          {field("brief_switch_minutes", "次の訪問に切替（分前）", "number")}
         </div>
       </Card>
-      <Card title="ユーザー（自社の営業担当）— メール・月の目標・代理送付">
+      <Card title="ユーザー">
         <div id="users" />
         <ul className="divide-y divide-line text-sm">
           {users.map((u) => (
@@ -67,14 +67,14 @@ export function SettingsForm({ initial, ai, users, meId, selfMail, templateRegis
                 <Button size="sm" variant="ghost" onClick={async () => { await fetch("/api/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: u.id, status: u.status === "active" ? "inactive" : "active" }) }); router.refresh(); }}>{u.status === "active" ? "無効にする" : "有効にする"}</Button>
               </div>
               <div className="grid sm:grid-cols-5 gap-2 items-end">
-                <div className="sm:col-span-2"><label className={labelCls}>メール（自分宛て送信の宛先）</label><input className={inputCls} value={targets[u.id]?.email ?? ""} onChange={(e) => setTargets({ ...targets, [u.id]: { ...targets[u.id], email: e.target.value } })} /></div>
+                <div className="sm:col-span-2"><label className={labelCls}>メール</label><input className={inputCls} value={targets[u.id]?.email ?? ""} onChange={(e) => setTargets({ ...targets, [u.id]: { ...targets[u.id], email: e.target.value } })} /></div>
                 <div><label className={labelCls}>月の売上目標（税抜）</label><input inputMode="numeric" className={`${inputCls} num`} placeholder="例 5000000" value={targets[u.id]?.sales ?? ""} onChange={(e) => setTargets({ ...targets, [u.id]: { ...targets[u.id], sales: e.target.value } })} /></div>
                 <div><label className={labelCls}>月の粗利目標</label><input inputMode="numeric" className={`${inputCls} num`} placeholder="例 1200000" value={targets[u.id]?.margin ?? ""} onChange={(e) => setTargets({ ...targets, [u.id]: { ...targets[u.id], margin: e.target.value } })} /></div>
                 <div><Button size="sm" variant="primary" onClick={() => saveUser(u)}>保存</Button></div>
               </div>
               <label className="flex items-center gap-2 text-xs">
                 <input type="checkbox" checked={Boolean(u.proxy_send_allowed)} onChange={async (e) => { await fetch("/api/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: u.id, proxy_send_allowed: e.target.checked }) }); router.refresh(); }} />
-                代理送付を許可する（会議・出張中など、本人が画面で内容を確認・承認したときだけ、アプリから得意先へ直接メールできる。CC に本人。履歴が残る）
+                代理送付を許可（本人の確認後に送信・CC 本人・履歴あり）
               </label>
             </li>
           ))}
@@ -89,11 +89,11 @@ export function SettingsForm({ initial, ai, users, meId, selfMail, templateRegis
         <p className="text-sm">状態: {ai.enabled ? <span className="text-ok font-semibold">接続済み</span> : <span className="text-warn font-semibold">未設定</span>}　モデル: <code>{ai.model}</code></p>
         {!ai.enabled && <p className="text-xs text-muted mt-1">営業AI棒のフォルダにある <code>.env</code> に <code>ANTHROPIC_API_KEY=（API キー）</code> を書き、再起動すると接続されます。</p>}
       </Card>
-      <Card title="マスタの取り込み（CSV）"><ImportPanel /></Card>
-      <Card title="見積書の書式（自社テンプレート）"><TemplatePanel registered={templateRegistered} /></Card>
-      <Card title="自分宛てメール（スマホから見積書を自分に送る）">
-        <p className="text-sm">送信方法: {selfMail?.smtp ? <span className="text-ok font-semibold">メール送信（SMTP: {selfMail.host}）</span> : <span className="text-warn font-semibold">未設定 → スマホの共有メニュー／メールアプリで送ります</span>}　宛先: {selfMail?.to ? <b>{selfMail.to}</b> : <span className="text-warn">未設定</span>}</p>
-        <p className="text-xs text-muted mt-1">営業AI棒は得意先に直接送りません。宛先は操作中ユーザーのメール（上のユーザー欄）、無ければ <code>.env</code> の <code>EIGYO_SELF_EMAIL</code>。アプリから直接メールするには <code>.env</code> に <code>EIGYO_SMTP_HOST</code> / <code>EIGYO_SMTP_PORT</code> / <code>EIGYO_SMTP_USER</code> / <code>EIGYO_SMTP_PASS</code> / <code>EIGYO_SMTP_FROM</code> を設定して再起動します。</p>
+      <Card title="マスタ取り込み（CSV）"><ImportPanel /></Card>
+      <Card title="見積書の書式"><TemplatePanel registered={templateRegistered} /></Card>
+      <Card title="自分宛てメール">
+        <p className="text-sm">送信方法: {selfMail?.smtp ? <span className="text-ok font-semibold">メール送信（SMTP: {selfMail.host}）</span> : <span className="text-warn font-semibold">SMTP 未設定（共有メニューで送る）</span>}　宛先: {selfMail?.to ? <b>{selfMail.to}</b> : <span className="text-warn">未設定</span>}</p>
+        
       </Card>
       <div className="flex items-center gap-3">
         <Button variant="primary" busy={busy} onClick={save}>保存</Button>

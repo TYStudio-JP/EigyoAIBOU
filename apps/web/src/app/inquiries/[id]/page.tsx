@@ -14,7 +14,7 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
   const facts = inquiryFacts(d, i.id);
   return (
     <>
-      <PageTitle title={`問い合わせ — ${i.customer?.short_name ?? "得意先未設定"}`} sub={`${i.created_at.slice(0, 16)} 受付${i.due ? `・期限 ${i.due}` : ""}`} />
+      <PageTitle title={`問い合わせ — ${i.customer?.short_name ?? "得意先未設定"}`} sub={`${i.created_at.slice(0, 10).replace(/-/g, "")} ${i.created_at.slice(11, 16)}${i.due ? `　期限 ${i.due.replace(/-/g, "")}` : ""}`} />
       <InquiryAnswer facts={facts} aiEnabled={hasApiKey()} customers={listCustomers(d).map((c) => ({ id: c.id, short_name: c.short_name }))} />
     </>
   );

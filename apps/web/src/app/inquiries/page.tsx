@@ -15,7 +15,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
   const list = listInquiries(d, { userId: sp.all === "1" ? null : me?.id ?? null, status: sp.done === "1" ? ["answered", "closed"] : ["open"], limit: 200 });
   return (
     <>
-      <PageTitle title={sp.done === "1" ? "回答済みの問い合わせ" : `問い合わせ未回答（${list.length}）`} sub="得意先からの仕様・納期・在庫・同等品・価格の質問。社内記録とウェブで回答文を作り、送るのは自分。" action={<div className="flex gap-2"><Link href={sp.done === "1" ? "/inquiries" : "/inquiries?done=1"} className="text-xs text-brand hover:underline self-center">{sp.done === "1" ? "未回答へ" : "回答済みを見る"}</Link><LinkButton href="/inquiries/new" variant="primary">＋ 問い合わせを記録</LinkButton></div>} />
+      <PageTitle title={sp.done === "1" ? "回答済みの問い合わせ" : `問い合わせ未回答（${list.length}）`} action={<div className="flex gap-2"><Link href={sp.done === "1" ? "/inquiries" : "/inquiries?done=1"} className="text-xs text-brand hover:underline self-center">{sp.done === "1" ? "未回答へ" : "回答済みを見る"}</Link><LinkButton href="/inquiries/new" variant="primary">＋ 問い合わせを記録</LinkButton></div>} />
       <Card>
         {list.length === 0 ? <Empty>{sp.done === "1" ? "回答済みはありません" : "未回答の問い合わせはありません"}</Empty> : (
           <ul className="divide-y divide-line">
