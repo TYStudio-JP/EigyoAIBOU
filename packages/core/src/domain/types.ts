@@ -145,6 +145,12 @@ export interface QuoteItem {
   supplier_id: number | null;
   supplier_delivery: string | null;
   remarks: string;
+  /** メーカー・仕入れ先からの回答（単価・有効期限・最小ロット・メモ・記録日時）。cost はこの単価で更新される。 */
+  supplier_quote_price: number | null;
+  supplier_quote_valid_until: string | null;
+  supplier_quote_min_lot: number | null;
+  supplier_quote_note: string | null;
+  supplier_quote_at: string | null;
 }
 
 export interface QuoteWithItems extends Quote {
@@ -175,6 +181,8 @@ export interface Settings {
   followup_days_first: number;      // 提出後、最初の追跡を促す日数
   followup_days_repeat: number;     // それ以降、繰り返し促す日数
   quote_valid_days: number;
+  /** 次の訪問まで何分以内になったらホームを「次の訪問」に切り替えるか。 */
+  brief_switch_minutes: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -189,6 +197,7 @@ export const DEFAULT_SETTINGS: Settings = {
   followup_days_first: 3,
   followup_days_repeat: 7,
   quote_valid_days: 30,
+  brief_switch_minutes: 10,
 };
 
 // ---------- 電話メモ ----------
@@ -332,8 +341,27 @@ export interface User {
   target_margin: number | null;
   /** 得意先への代理送付（アプリから直接メール）を許可するか。既定は不可。 */
   proxy_send_allowed: number;
+  /** カレンダーの非公開 iCal URL（Google カレンダー等）。訪問予定の取り込み元。 */
+  calendar_ics_url: string | null;
   created_at: string;
 }
+
+/** 訪問予定（アプリ内入力またはカレンダー取り込み）。時刻は "YYYY-MM-DD HH:MM"（ローカル）。 */
+export interface Visit {
+  id: number;
+  user_id: number | null;
+  customer_id: number | null;
+  title: string;
+  starts_at: string;
+  ends_at: string | null;
+  place: string;
+  source: "manual" | "ics";
+  external_id: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+export interface VisitWithCustomer extends Visit { customer: Customer | null }
 
 /** 回答納期の種類：注文前の概算か、注文後の確定か。 */
 export type DeliveryKind = "estimate" | "confirmed";

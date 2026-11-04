@@ -200,8 +200,61 @@ function ItemCard({ item: it, line, isOpen, onToggle, edit, onEdit, onReset }: {
           </div>
           {p?.rule && <p className="text-muted">{p.rule.label}</p>}
           {it.supplier && <p className="text-muted">仕入れ先: {it.supplier.name}{it.supplier_delivery ? `（納期回答 ${dateJp(it.supplier_delivery)}）` : "（納期回答待ち）"}</p>}
+          <SupplierQuoteForm quoteId={it.quote_id} item={it} ruleLabel={p?.rule?.label ?? null} />
         </div>
       )}
+    </div>
+  );
+}
+
+/** メーカー回答を入れる：単価・納期・有効期限・最小ロット。回答メールを貼れば AI（無ければ簡易抽出）で埋め、「いつもの掛率で値付け」まで 1 回で終える。 */
+function SupplierQuoteForm({ quoteId, item, ruleLabel }: { quoteId: number; item: QuoteWithItems["items"][number]; ruleLabel: string | null }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [f, setF] = useState({ price: item.supplier_quote_price != null ? String(item.supplier_quote_price) : "", delivery: item.supplier_delivery ?? "", valid_until: item.supplier_quote_valid_until ?? "", min_lot: item.supplier_quote_min_lot != null ? String(item.supplier_quote_min_lot) : "", note: item.supplier_quote_note ?? "" });
+  const [paste, setPaste] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const extract = async () => {
+    setBusy("extract"); setErr(null);
+    try {
+      const r = await fetch("/api/supplier-reply", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: paste, context: `${item.description} × ${item.qty}${item.unit}` }) });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error ?? "読み取れませんでした");
+      setF({ price: j.unit_price != null ? String(j.unit_price) : f.price, delivery: j.delivery ?? f.delivery, valid_until: j.valid_until ?? f.valid_until, min_lot: j.min_lot != null ? String(j.min_lot) : f.min_lot, note: j.note ?? f.note });
+      setMsg(j.ai_used ? "AI で読み取りました。数字を確認してください。" : "簡易抽出で読み取りました（AI 未接続）。数字を確認してください。");
+    } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(null); }
+  };
+  const save = async (applyRule: boolean) => {
+    setBusy(applyRule ? "apply" : "save"); setErr(null); setMsg(null);
+    try {
+      const r = await fetch(`/api/quotes/${quoteId}/items/${item.id}/supplier-quote`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ price: f.price.trim() ? Number(f.price.replace(/,/g, "")) : null, delivery: f.delivery || null, valid_until: f.valid_until || null, min_lot: f.min_lot.trim() ? Number(f.min_lot) : null, note: f.note || null, apply_rule: applyRule }) });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error ?? "保存できませんでした");
+      setMsg(j.applied_unit_price ? `売単価を ${yen(j.applied_unit_price)} にしました（${j.rule?.label ?? ""}）` : j.rule_price ? `保存しました。いつもの掛率なら ${yen(j.rule_price)}` : "保存しました");
+      router.refresh();
+    } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(null); }
+  };
+  if (!open) return <button type="button" className="text-brand font-semibold" onClick={() => setOpen(true)}>📩 メーカー回答を入れる{item.supplier_quote_at ? `（前回 ${dateJp(item.supplier_quote_at)}）` : ""}</button>;
+  return (
+    <div className="rounded-md border border-line bg-bg p-2 space-y-2">
+      <div className="font-semibold">メーカー回答を入れる</div>
+      <textarea className={`${inputCls} h-16 font-sans`} placeholder="回答メールの本文を貼ると、単価・納期・有効期限を読み取ります" value={paste} onChange={(e) => setPaste(e.target.value)} />
+      <Button size="sm" busy={busy === "extract"} disabled={!paste.trim()} onClick={extract}>貼った文面から読み取る</Button>
+      <div className="grid grid-cols-2 gap-2">
+        <div><label className={labelCls}>仕入れ単価（円）</label><input inputMode="decimal" className={`${inputCls} num text-right`} value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} /></div>
+        <div><label className={labelCls}>最小ロット</label><input inputMode="numeric" className={`${inputCls} num text-right`} value={f.min_lot} onChange={(e) => setF({ ...f, min_lot: e.target.value })} /></div>
+        <div><label className={labelCls}>納期（出荷・納品日）</label><input type="date" className={inputCls} value={f.delivery} onChange={(e) => setF({ ...f, delivery: e.target.value })} /></div>
+        <div><label className={labelCls}>回答の有効期限</label><input type="date" className={inputCls} value={f.valid_until} onChange={(e) => setF({ ...f, valid_until: e.target.value })} /></div>
+      </div>
+      <input className={inputCls} placeholder="条件メモ（送料別・在庫限り など）" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} />
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="primary" busy={busy === "apply"} onClick={() => save(true)} disabled={!ruleLabel && !f.price.trim()} title={ruleLabel ?? "得意先に値付けルールが無いので売単価は変えません"}>保存して{ruleLabel ? "いつもの掛率で値付け" : "保存"}</Button>
+        <Button size="sm" busy={busy === "save"} onClick={() => save(false)}>保存（売単価はそのまま）</Button>
+        <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>閉じる</Button>
+      </div>
+      {ruleLabel && <p className="text-muted">{ruleLabel}</p>}
+      {msg && <p className="text-ok">{msg}</p>}
+      {err && <p className="text-danger">{err}</p>}
     </div>
   );
 }

@@ -30,8 +30,25 @@ CREATE TABLE IF NOT EXISTS users (
   target_sales  REAL,
   target_margin REAL,
   proxy_send_allowed INTEGER NOT NULL DEFAULT 0,
+  calendar_ics_url TEXT,
   created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
+
+CREATE TABLE IF NOT EXISTS visits (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id       INTEGER REFERENCES users(id),
+  customer_id   INTEGER REFERENCES customers(id),
+  title         TEXT NOT NULL,
+  starts_at     TEXT NOT NULL,
+  ends_at       TEXT,
+  place         TEXT NOT NULL DEFAULT '',
+  source        TEXT NOT NULL CHECK (source IN ('manual','ics')) DEFAULT 'manual',
+  external_id   TEXT,
+  notes         TEXT NOT NULL DEFAULT '',
+  created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  updated_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_visits_external ON visits(user_id, source, external_id) WHERE external_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS crosssell_dismissals (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -190,7 +207,12 @@ CREATE TABLE IF NOT EXISTS quote_items (
   cost          REAL NOT NULL DEFAULT 0,
   supplier_id   INTEGER REFERENCES suppliers(id),
   supplier_delivery TEXT,
-  remarks       TEXT NOT NULL DEFAULT ''
+  remarks       TEXT NOT NULL DEFAULT '',
+  supplier_quote_price REAL,
+  supplier_quote_valid_until TEXT,
+  supplier_quote_min_lot INTEGER,
+  supplier_quote_note TEXT,
+  supplier_quote_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS activities (

@@ -640,7 +640,7 @@ export function createUser(db: Db, u: { name: string; department?: string; email
   const res = db.prepare("INSERT INTO users(name,department,email,status,target_sales,target_margin) VALUES(?,?,?,?,?,?)").run(u.name, u.department ?? "", u.email ?? null, u.status ?? "active", u.target_sales ?? null, u.target_margin ?? null);
   return getUser(db, Number(res.lastInsertRowid))!;
 }
-export function updateUser(db: Db, id: number, patch: Partial<Pick<User, "name" | "department" | "email" | "status" | "target_sales" | "target_margin" | "proxy_send_allowed">>): User {
+export function updateUser(db: Db, id: number, patch: Partial<Pick<User, "name" | "department" | "email" | "status" | "target_sales" | "target_margin" | "proxy_send_allowed" | "calendar_ics_url">>): User {
   const keys = Object.keys(patch) as (keyof typeof patch)[];
   if (keys.length) db.prepare(`UPDATE users SET ${keys.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...keys.map((k) => patch[k] as string | number | null), id);
   return getUser(db, id)!;
@@ -671,6 +671,60 @@ export function listCrossSellDismissals(db: Db, customerId: number): CrossSellDi
 // ---------- 概算／確定納期 ----------
 export function setDeliveryKind(db: Db, quoteId: number, kind: DeliveryKind): void {
   db.prepare("UPDATE quotes SET delivery_kind=?, updated_at=? WHERE id=?").run(kind, nowStamp(), quoteId);
+}
+
+// ---------- 訪問予定 ----------
+import type { Visit, VisitWithCustomer } from "./types";
+function hydrateVisit(db: Db, v: Visit): VisitWithCustomer { return { ...v, customer: v.customer_id ? getCustomer(db, v.customer_id) : null }; }
+export function createVisit(db: Db, v: { user_id: number | null; customer_id?: number | null; title: string; starts_at: string; ends_at?: string | null; place?: string; source?: "manual" | "ics"; external_id?: string | null; notes?: string }): VisitWithCustomer {
+  const now = nowStamp();
+  const res = db.prepare("INSERT INTO visits(user_id,customer_id,title,starts_at,ends_at,place,source,external_id,notes,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)")
+    .run(v.user_id, v.customer_id ?? null, v.title, v.starts_at, v.ends_at ?? null, v.place ?? "", v.source ?? "manual", v.external_id ?? null, v.notes ?? "", now, now);
+  return getVisit(db, Number(res.lastInsertRowid))!;
+}
+export function getVisit(db: Db, id: number): VisitWithCustomer | null {
+  const v = one<Visit>(db, "SELECT * FROM visits WHERE id=?", id);
+  return v ? hydrateVisit(db, v) : null;
+}
+/** 期間内の訪問予定（開始時刻順）。from/to は "YYYY-MM-DD" または "YYYY-MM-DD HH:MM"。 */
+export function listVisits(db: Db, opts: { userId?: number | null; from?: string; to?: string; limit?: number } = {}): VisitWithCustomer[] {
+  const where: string[] = []; const params: (string | number)[] = [];
+  if (opts.userId) { where.push("user_id=?"); params.push(opts.userId); }
+  if (opts.from) { where.push("COALESCE(ends_at, starts_at) >= ?"); params.push(opts.from); }
+  if (opts.to) { where.push("starts_at <= ?"); params.push(opts.to); }
+  params.push(opts.limit ?? 200);
+  return all<Visit>(db, `SELECT * FROM visits ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY starts_at, id LIMIT ?`, ...params).map((v) => hydrateVisit(db, v));
+}
+export function updateVisit(db: Db, id: number, patch: Partial<Pick<Visit, "customer_id" | "title" | "starts_at" | "ends_at" | "place" | "notes">>): VisitWithCustomer {
+  const keys = Object.keys(patch) as (keyof typeof patch)[];
+  if (keys.length) db.prepare(`UPDATE visits SET ${keys.map((k) => `${k}=?`).join(", ")}, updated_at=? WHERE id=?`).run(...keys.map((k) => patch[k] as string | number | null), nowStamp(), id);
+  return getVisit(db, id)!;
+}
+export function deleteVisit(db: Db, id: number): void { db.prepare("DELETE FROM visits WHERE id=?").run(id); }
+/** カレンダー取り込み：同じ UID は更新、無ければ追加。手で直した得意先の紐づけは保つ。 */
+export function upsertIcsVisit(db: Db, v: { user_id: number; external_id: string; title: string; starts_at: string; ends_at: string | null; place: string; customer_id: number | null }): { visit: VisitWithCustomer; created: boolean } {
+  const prev = one<Visit>(db, "SELECT * FROM visits WHERE user_id=? AND source='ics' AND external_id=?", v.user_id, v.external_id);
+  if (prev) {
+    updateVisit(db, prev.id, { title: v.title, starts_at: v.starts_at, ends_at: v.ends_at, place: v.place, customer_id: prev.customer_id ?? v.customer_id });
+    return { visit: getVisit(db, prev.id)!, created: false };
+  }
+  return { visit: createVisit(db, { ...v, source: "ics" }), created: true };
+}
+/** 取り込み元から消えた ICS 予定を消す（期間内のみ）。 */
+export function pruneIcsVisits(db: Db, userId: number, keepExternalIds: Set<string>, from: string, to: string): number {
+  const rows = all<Visit>(db, "SELECT * FROM visits WHERE user_id=? AND source='ics' AND starts_at>=? AND starts_at<=?", userId, from, to);
+  let n = 0;
+  for (const r of rows) if (r.external_id && !keepExternalIds.has(r.external_id)) { deleteVisit(db, r.id); n++; }
+  return n;
+}
+
+// ---------- メーカー回答（明細の仕入れ回答） ----------
+export function updateQuoteItem(db: Db, itemId: number, patch: Partial<Pick<QuoteItem, "unit_price" | "cost" | "supplier_id" | "supplier_delivery" | "remarks" | "supplier_quote_price" | "supplier_quote_valid_until" | "supplier_quote_min_lot" | "supplier_quote_note" | "supplier_quote_at">>): QuoteItem | null {
+  const keys = Object.keys(patch) as (keyof typeof patch)[];
+  if (keys.length) db.prepare(`UPDATE quote_items SET ${keys.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...keys.map((k) => patch[k] as string | number | null), itemId);
+  const it = one<QuoteItem>(db, "SELECT * FROM quote_items WHERE id=?", itemId);
+  if (it) touch(db, it.quote_id);
+  return it;
 }
 
 // ---------- メール送信履歴（自分宛て・代理送付） ----------
