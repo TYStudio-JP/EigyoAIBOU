@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getQuote, getSettings } from "@eigyo/core";
 import { db } from "@/lib/db";
-import { dateJp, yen } from "@/lib/format";
+import { dateLong as dateJp, yen } from "@/lib/format";
 import { PrintButton } from "@/components/print-button";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export default async function QuotePrintPage({ params }: { params: Promise<{ id:
   return (
     <div className="max-w-[210mm] mx-auto bg-white text-black p-6 lg:p-10 text-[13px] leading-relaxed print:p-0">
       <div className="no-print mb-4 flex items-center justify-between gap-2 rounded-md border border-line bg-bg px-3 py-2 text-xs">
-        <span>印刷ダイアログで「PDF に保存」を選ぶと PDF になります（iPhone は共有 → プリント → ピンチアウトで PDF）。</span>
+        <span>印刷 → 「PDF に保存」</span>
         <PrintButton />
       </div>
       <h1 className="text-center text-2xl font-bold tracking-[0.5em] mb-6">御 見 積 書</h1>

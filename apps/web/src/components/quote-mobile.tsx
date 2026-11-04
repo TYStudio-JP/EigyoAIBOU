@@ -96,7 +96,7 @@ export function QuoteMobile({ quote, lines, aiEnabled, deal, diff }: { quote: Qu
         </div>
         {pending && (
           <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            {dateJp(quote.provisional_at)} に{PROVISIONAL_CHANNEL_LABEL[quote.provisional_channel ?? "phone"]}で暫定回答済み。正式見積書を送ったら「正式送付済み」にしてください。
+            {dateJp(quote.provisional_at)} {PROVISIONAL_CHANNEL_LABEL[quote.provisional_channel ?? "phone"].replace(/（.*）/, "")}で暫定回答済み
             {diff.changed && <ul className="mt-1 text-danger font-semibold list-disc pl-4">{diff.lines.map((l, i) => <li key={i}>{l}</li>)}</ul>}
           </div>
         )}
@@ -126,7 +126,7 @@ export function QuoteMobile({ quote, lines, aiEnabled, deal, diff }: { quote: Qu
           <div className="space-y-2">
             {pending && (
               <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs">
-                <div className="font-semibold text-amber-900">正式見積書を送ったら</div>
+                <div className="font-semibold text-amber-900">正式見積書</div>
                 {diff.changed && <ul className="mt-1 text-danger list-disc pl-4">{diff.lines.map((l, i) => <li key={i}>{l}</li>)}</ul>}
                 <Button variant="primary" className="w-full justify-center mt-2" busy={busy === "formal"} onClick={markFormal}>正式送付済みにする</Button>
               </div>
@@ -189,7 +189,7 @@ function ItemCard({ item: it, line, isOpen, onToggle, edit, onEdit, onReset }: {
             </div>
           )}
           <div className="grid grid-cols-2 gap-2">
-            <div><label className={labelCls}>仕入れ単価（メーカー回答）</label><input type="number" inputMode="decimal" className={`${inputCls} num text-right`} value={cost} onChange={(e) => set({ cost: Number(e.target.value) })} /></div>
+            <div><label className={labelCls}>仕入れ単価</label><input type="number" inputMode="decimal" className={`${inputCls} num text-right`} value={cost} onChange={(e) => set({ cost: Number(e.target.value) })} /></div>
             <div><label className={labelCls}>売単価</label><input type="number" inputMode="decimal" className={`${inputCls} num text-right ${lvl === "danger" ? "border-danger" : ""}`} value={price} onChange={(e) => set({ unit_price: Number(e.target.value) })} /></div>
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -222,7 +222,7 @@ function SupplierQuoteForm({ quoteId, item, ruleLabel }: { quoteId: number; item
       const r = await fetch("/api/supplier-reply", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: paste, context: `${item.description} × ${item.qty}${item.unit}` }) });
       const j = await r.json(); if (!r.ok) throw new Error(j.error ?? "読み取れませんでした");
       setF({ price: j.unit_price != null ? String(j.unit_price) : f.price, delivery: j.delivery ?? f.delivery, valid_until: j.valid_until ?? f.valid_until, min_lot: j.min_lot != null ? String(j.min_lot) : f.min_lot, note: j.note ?? f.note });
-      setMsg(j.ai_used ? "AI で読み取りました。数字を確認してください。" : "簡易抽出で読み取りました（AI 未接続）。数字を確認してください。");
+      setMsg(j.ai_used ? "読み取りました" : "読み取りました（AI 未接続）");
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(null); }
   };
   const save = async (applyRule: boolean) => {
@@ -238,8 +238,8 @@ function SupplierQuoteForm({ quoteId, item, ruleLabel }: { quoteId: number; item
   return (
     <div className="rounded-md border border-line bg-bg p-2 space-y-2">
       <div className="font-semibold">メーカー回答を入れる</div>
-      <textarea className={`${inputCls} h-16 font-sans`} placeholder="回答メールの本文を貼ると、単価・納期・有効期限を読み取ります" value={paste} onChange={(e) => setPaste(e.target.value)} />
-      <Button size="sm" busy={busy === "extract"} disabled={!paste.trim()} onClick={extract}>貼った文面から読み取る</Button>
+      <textarea className={`${inputCls} h-16 font-sans`} placeholder="回答メールを貼り付け" value={paste} onChange={(e) => setPaste(e.target.value)} />
+      <Button size="sm" busy={busy === "extract"} disabled={!paste.trim()} onClick={extract}>読み取る</Button>
       <div className="grid grid-cols-2 gap-2">
         <div><label className={labelCls}>仕入れ単価（円）</label><input inputMode="decimal" className={`${inputCls} num text-right`} value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} /></div>
         <div><label className={labelCls}>最小ロット</label><input inputMode="numeric" className={`${inputCls} num text-right`} value={f.min_lot} onChange={(e) => setF({ ...f, min_lot: e.target.value })} /></div>
@@ -248,8 +248,8 @@ function SupplierQuoteForm({ quoteId, item, ruleLabel }: { quoteId: number; item
       </div>
       <input className={inputCls} placeholder="条件メモ（送料別・在庫限り など）" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} />
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="primary" busy={busy === "apply"} onClick={() => save(true)} disabled={!ruleLabel && !f.price.trim()} title={ruleLabel ?? "得意先に値付けルールが無いので売単価は変えません"}>保存して{ruleLabel ? "いつもの掛率で値付け" : "保存"}</Button>
-        <Button size="sm" busy={busy === "save"} onClick={() => save(false)}>保存（売単価はそのまま）</Button>
+        <Button size="sm" variant="primary" busy={busy === "apply"} onClick={() => save(true)} disabled={!ruleLabel && !f.price.trim()} >{ruleLabel ? "いつもの掛率で値付け" : "保存"}</Button>
+        <Button size="sm" busy={busy === "save"} onClick={() => save(false)}>単価そのままで保存</Button>
         <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>閉じる</Button>
       </div>
       {ruleLabel && <p className="text-muted">{ruleLabel}</p>}
@@ -280,8 +280,7 @@ function ProvisionalSheet({ quote, onClose, onDone }: { quote: QuoteWithItems; o
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
   };
   return (
-    <Modal title="暫定で回答する（正式見積書は後で）" onClose={onClose}>
-      <p className="text-xs text-muted mb-2">単価・納期を先に伝えるときの文面です。送るのはご自身の SMS・LINE・メールから。記録すると「正式未送付」として追跡します。</p>
+    <Modal title="暫定で回答" onClose={onClose}>
       <div className="grid grid-cols-4 gap-1 mb-2">
         {(Object.keys(PROVISIONAL_CHANNEL_LABEL) as ProvisionalChannel[]).map((k) => (
           <button key={k} type="button" onClick={() => setChannel(k)} className={`rounded-md border px-1 py-1.5 text-xs ${channel === k ? "bg-brand text-brand-ink border-brand font-semibold" : "border-line"}`}>{PROVISIONAL_CHANNEL_LABEL[k].replace(/（.*）/, "")}</button>
@@ -293,7 +292,7 @@ function ProvisionalSheet({ quote, onClose, onDone }: { quote: QuoteWithItems; o
         <Button size="sm" onClick={share}>共有（SMS・LINE へ）</Button>
       </div>
       {err && <p className="text-sm text-danger mt-2">{err}</p>}
-      <Button variant="primary" className="w-full justify-center mt-4" busy={busy} onClick={record}>{PROVISIONAL_CHANNEL_LABEL[channel]}で回答したと記録</Button>
+      <Button variant="primary" className="w-full justify-center mt-4" busy={busy} onClick={record}>{PROVISIONAL_CHANNEL_LABEL[channel].replace(/（.*）/, "")}で回答済み</Button>
     </Modal>
   );
 }
@@ -313,7 +312,7 @@ function SelfMailSheet({ quote, onClose, onDone }: { quote: QuoteWithItems; onCl
       const r = await fetch(`/api/quotes/${quote.id}/send-self`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "customer", confirm: true }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error ?? "送信に失敗しました");
-      setMsg(`得意先（${j.to}）へ送信しました。CC: ${j.cc ?? "-"}。履歴は経緯に残ります。`);
+      setMsg(`${j.to} へ送信しました（CC ${j.cc ?? "-"}）`);
       setTimeout(onDone, 1500);
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(null); }
   };
@@ -325,7 +324,7 @@ function SelfMailSheet({ quote, onClose, onDone }: { quote: QuoteWithItems; onCl
       const r = await fetch(`/api/quotes/${quote.id}/send-self`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "formal" }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error ?? "送信に失敗しました");
-      setMsg(`${j.to} に送りました。メールアプリから得意先へ転送してください。`);
+      setMsg(`${j.to} に送信しました`);
       setTimeout(onDone, 1200);
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(null); }
   };
@@ -340,21 +339,20 @@ function SelfMailSheet({ quote, onClose, onDone }: { quote: QuoteWithItems; onCl
     } catch { /* cancelled */ } finally { setBusy(null); }
   };
   return (
-    <Modal title="自分宛てに送る（得意先には送りません）" onClose={onClose}>
+    <Modal title="自分宛てに送る" onClose={onClose}>
       {!pkg ? <p className="text-sm text-muted">文面を作成中…</p> : (
         <div className="space-y-3 text-sm">
           <div className="rounded-md bg-bg p-3 text-xs">
             <div><span className="text-muted">宛先：</span>{pkg.to ?? <span className="text-warn">未設定（設定でユーザーのメールを登録）</span>}</div>
             <div className="mt-1"><span className="text-muted">件名：</span>{pkg.subject}</div>
-            <div className="mt-1 text-muted">添付：見積書（Excel）／ 本文：得意先向け送付文の例＋チェック結果＋明細</div>
+            <div className="mt-1 text-muted">添付：見積書（Excel）</div>
           </div>
           {pkg.smtp ? (
             <Button variant="primary" className="w-full justify-center" busy={busy === "send"} onClick={send} disabled={!pkg.to}>自分宛てにメール送信</Button>
           ) : (
             <div className="space-y-2">
-              <p className="text-xs text-muted">メール送信（SMTP）が未設定なので、スマホの共有メニューかメールアプリに渡します。</p>
-              <Button variant="primary" className="w-full justify-center" busy={busy === "share"} onClick={shareExcel}>見積書を共有（メールに添付）</Button>
-              <a href={mailto} className="block text-center rounded-md border border-line bg-surface px-3.5 py-2 text-sm font-medium">メールアプリで文面を開く</a>
+              <Button variant="primary" className="w-full justify-center" busy={busy === "share"} onClick={shareExcel}>見積書を共有</Button>
+              <a href={mailto} className="block text-center rounded-md border border-line bg-surface px-3.5 py-2 text-sm font-medium">メールアプリで開く</a>
             </div>
           )}
           <div className="flex flex-wrap gap-2">
@@ -364,16 +362,16 @@ function SelfMailSheet({ quote, onClose, onDone }: { quote: QuoteWithItems; onCl
           {showBody && <pre className="whitespace-pre-wrap bg-bg rounded-md p-3 text-xs font-sans max-h-64 overflow-y-auto">{pkg.body}</pre>}
           {pkg.proxy?.allowed && (
             <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs space-y-2">
-              <div className="font-semibold text-red-800">代理送付（得意先へ直接）— 会議・出張で自分から送れないときだけ</div>
+              <div className="font-semibold text-red-800">代理送付（得意先へ直接）</div>
               {proxyStep === 0 ? (
-                <Button size="sm" variant="danger" onClick={() => setProxyStep(1)}>代理送付の内容を確認する</Button>
+                <Button size="sm" variant="danger" onClick={() => setProxyStep(1)}>内容を確認</Button>
               ) : (
                 <>
                   <div>宛先：<b>{pkg.proxy.to}</b>　CC：{pkg.to ?? "-"}</div>
                   <div>件名：{pkg.customer_subject}</div>
                   <pre className="whitespace-pre-wrap bg-white rounded p-2 font-sans max-h-40 overflow-y-auto">{pkg.customer_body}</pre>
                   <div>添付：見積書（Excel）</div>
-                  <label className="flex items-center gap-2"><input type="checkbox" checked={proxyChecked} onChange={(e) => setProxyChecked(e.target.checked)} />宛先・金額・文面を確認した。この内容で得意先へ送る</label>
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={proxyChecked} onChange={(e) => setProxyChecked(e.target.checked)} />宛先・金額・文面を確認した</label>
                   <div className="flex gap-2"><Button size="sm" variant="danger" busy={busy === "proxy"} disabled={!proxyChecked} onClick={sendProxy}>得意先へ送信する</Button><Button size="sm" variant="ghost" onClick={() => { setProxyStep(0); setProxyChecked(false); }}>やめる</Button></div>
                 </>
               )}

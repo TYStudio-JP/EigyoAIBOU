@@ -2,7 +2,10 @@ export const yen = (n: number | null | undefined, digits = 0): string =>
   n == null ? "-" : `¥${Number(n).toLocaleString("ja-JP", { maximumFractionDigits: digits })}`;
 export const pct = (n: number | null | undefined, digits = 1): string => (n == null ? "-" : `${Number(n).toFixed(digits)}%`);
 export const num = (n: number | null | undefined): string => (n == null ? "-" : Number(n).toLocaleString("ja-JP"));
-export const dateJp = (iso: string | null | undefined): string => {
+/** 画面用の短い日付（20261104）。 */
+export const dateJp = (iso: string | null | undefined): string => (iso ? iso.slice(0, 10).replace(/-/g, "") : "-");
+/** 見積書・印刷用の日付（2026/11/04）。 */
+export const dateLong = (iso: string | null | undefined): string => {
   if (!iso) return "-";
   const [y, m, d] = iso.slice(0, 10).split("-");
   return `${y}/${m}/${d}`;

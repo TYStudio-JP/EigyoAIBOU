@@ -22,17 +22,15 @@ export function SharePick({ item }: { item: ShareItem | null }) {
   };
   return (
     <div className="space-y-3">
-      {item?.file_name && <Card title="添付"><p className="text-sm">{item.file_name} <span className="text-xs text-muted">{item.file_mime}</span></p>{isImage && <Button variant="primary" className="mt-2 w-full justify-center" onClick={() => router.push(`/products/photo?t=${item.token}`)}>📷 この写真から商品・同等品を調べる</Button>}</Card>}
+      {item?.file_name && <Card title="添付"><p className="text-sm">{item.file_name} <span className="text-xs text-muted">{item.file_mime}</span></p>{isImage && <Button variant="primary" className="mt-2 w-full justify-center" onClick={() => router.push(`/products/photo?t=${item.token}`)}>📷 写真で調べる</Button>}</Card>}
       <Card title="本文">
-        <textarea className={`${inputCls} h-40 font-sans`} value={text} onChange={(e) => setText(e.target.value)} placeholder="メール本文・LINE の文面を貼り付け" />
+        <textarea className={`${inputCls} h-40 font-sans`} value={text} onChange={(e) => setText(e.target.value)} placeholder="本文を貼り付け" />
         <div className="grid grid-cols-2 gap-2 mt-3">
           <Button variant="primary" className="justify-center" disabled={!text.trim()} onClick={toQuote}>✎ 見積りを作る</Button>
           <Button className="justify-center" disabled={!text.trim()} busy={busy === "inq"} onClick={toInquiry}>❓ 問い合わせに回答</Button>
         </div>
-        {!isImage && <p className="text-xs text-muted mt-2">写真から商品を調べるには <a href="/products/photo" className="text-brand">写真で調べる</a> を開いてください。</p>}
         {err && <p className="text-sm text-danger mt-2">{err}</p>}
       </Card>
-      <p className="text-xs text-muted">Android は「ホーム画面に追加」した営業AI棒が共有メニューに出ます（HTTPS で開いていることが条件）。iPhone は共有メニューに出ないため、本文をコピーしてこの画面に貼り付けてください。</p>
     </div>
   );
 }

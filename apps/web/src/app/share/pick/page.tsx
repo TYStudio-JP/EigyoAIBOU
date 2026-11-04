@@ -11,7 +11,7 @@ export default async function SharePickPage({ searchParams }: { searchParams: Pr
   const item = t ? getShareItem(db(), t) : null;
   return (
     <>
-      <PageTitle title="受け取った内容をどうしますか？" sub={item ? `共有メニューから ${item.created_at.slice(11, 16)} に受け取りました（1 時間で消えます）` : "共有メニューから開くと、ここにメールや写真が入ります。iPhone は本文をコピーして貼り付けてください。"} />
+      <PageTitle title="受け取った内容" />
       <SharePick item={item} />
     </>
   );

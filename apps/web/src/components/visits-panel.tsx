@@ -34,7 +34,7 @@ export function VisitsPanel({ visits, customers, icsUrl, google, flash }: { visi
     setBusy(mode); setErr(null); setMsg(null);
     try {
       const j: IcsSyncResult | { cleared: true } = await post("/api/visits/sync", mode === "url" ? { ics_url: url } : { ics_text: icsText });
-      setMsg("cleared" in j ? "カレンダー連携を解除しました" : `取り込み：${j.fetched} 件（追加 ${j.created}・更新 ${j.updated}・削除 ${j.removed}、得意先を推定 ${j.matched} 件）${j.from.slice(0, 10)}〜${j.to.slice(0, 10)}`);
+      setMsg("cleared" in j ? "解除しました" : `${j.fetched} 件（追加 ${j.created}・更新 ${j.updated}・削除 ${j.removed}）`);
       router.refresh();
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(null); }
   };
@@ -43,7 +43,7 @@ export function VisitsPanel({ visits, customers, icsUrl, google, flash }: { visi
     try {
       const r = await fetch("/api/google/sync", { method }); const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error ?? "失敗しました");
-      setMsg(method === "DELETE" ? "Google カレンダーの連携を解除しました（取り込んだ予定は残ります）" : `Google カレンダーから ${j.fetched} 件（追加 ${j.created}・更新 ${j.updated}・削除 ${j.removed}、得意先を推定 ${j.matched} 件）`);
+      setMsg(method === "DELETE" ? "解除しました" : `${j.fetched} 件（追加 ${j.created}・更新 ${j.updated}・削除 ${j.removed}）`);
       router.refresh();
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(null); }
   };
@@ -54,20 +54,20 @@ export function VisitsPanel({ visits, customers, icsUrl, google, flash }: { visi
 
   return (
     <div className="space-y-4">
-      <Card title="予定を追加（手入力）">
+      <Card title="予定を追加">
         <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 items-end text-sm">
           <div><label className={labelCls}>日付</label><input type="date" className={inputCls} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
           <div><label className={labelCls}>開始</label><input type="time" className={inputCls} value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} /></div>
           <div><label className={labelCls}>終了（任意）</label><input type="time" className={inputCls} value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} /></div>
-          <div className="col-span-2 sm:col-span-2"><label className={labelCls}>得意先</label><select className={inputCls} value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value })}><option value="">— タイトルから推定 —</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.short_name}</option>)}</select></div>
+          <div className="col-span-2 sm:col-span-2"><label className={labelCls}>得意先</label><select className={inputCls} value={form.customer_id} onChange={(e) => setForm({ ...form, customer_id: e.target.value })}><option value="">得意先（自動）</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.short_name}</option>)}</select></div>
           <div><Button variant="primary" className="w-full justify-center" busy={busy === "add"} onClick={add}>追加</Button></div>
-          <div className="col-span-2 sm:col-span-3"><label className={labelCls}>件名（任意）</label><input className={inputCls} placeholder="例: 第2ラインの打合せ" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+          <div className="col-span-2 sm:col-span-3"><label className={labelCls}>件名（任意）</label><input className={inputCls} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
           <div className="col-span-2 sm:col-span-3"><label className={labelCls}>場所（任意）</label><input className={inputCls} value={form.place} onChange={(e) => setForm({ ...form, place: e.target.value })} /></div>
         </div>
       </Card>
 
       <Card title={`これからの訪問（${visits.length}）`}>
-        {visits.length === 0 ? <Empty>予定がありません。上で追加するか、カレンダーを取り込んでください。</Empty> : (
+        {visits.length === 0 ? <Empty>予定なし</Empty> : (
           <div className="space-y-3">
             {[...byDay.entries()].map(([day, list]) => (
               <div key={day}>
@@ -90,24 +90,23 @@ export function VisitsPanel({ visits, customers, icsUrl, google, flash }: { visi
       </Card>
 
       {flash && <p className={`text-sm ${flash.ok ? "text-ok" : "text-danger"}`}>{flash.msg}</p>}
-      <Card title="Google カレンダーと連携（OAuth）">
-        {!google.configured ? (
-          <p className="text-xs text-muted">管理者向け：Google Cloud で OAuth クライアント（ウェブ）を作り、リダイレクト URI に <code>{"{公開URL}"}/api/google/callback</code> を登録し、<code>.env</code> に <code>GOOGLE_CLIENT_ID</code> / <code>GOOGLE_CLIENT_SECRET</code> を設定して再起動すると、ここにボタンが出ます。設定しなくても下の iCal URL で取り込めます。</p>
-        ) : google.connected ? (
-          <div className="flex flex-wrap items-center gap-2 text-sm"><span className="text-ok font-semibold">連携中</span><span className="text-xs text-muted">{google.email ?? ""}</span><Button size="sm" variant="primary" busy={busy === "google"} onClick={() => gsync("POST")}>今すぐ同期</Button><Button size="sm" variant="ghost" busy={busy === "google"} onClick={() => { if (confirm("Google カレンダーの連携を解除しますか？")) gsync("DELETE"); }}>解除</Button><span className="text-xs text-muted w-full">繰り返し予定も展開して取り込みます。読み取り専用で、カレンダーは変更しません。</span></div>
-        ) : (
-          <a href="/api/google/auth" className="inline-flex items-center rounded-md bg-brand text-brand-ink px-3.5 py-2 text-sm font-medium">Google カレンダーと連携する</a>
-        )}
-      </Card>
-      <Card title="カレンダーから取り込む（Google カレンダー等の非公開 iCal URL）">
-        <p className="text-xs text-muted mb-2">Google カレンダー → 設定 → 対象カレンダー → 「非公開 URL（iCal 形式）」をコピーして貼り付けます。予定のタイトル・場所に社名があれば得意先を自動で当てます（違えば上で選び直せます）。前後 1 週間〜30 日先まで取り込み、繰り返し予定は展開しません。</p>
+      {google.configured && (
+        <Card title="Google カレンダー">
+          {google.connected ? (
+            <div className="flex flex-wrap items-center gap-2 text-sm"><span className="text-ok font-semibold">連携中</span><span className="text-xs text-muted">{google.email ?? ""}</span><Button size="sm" variant="primary" busy={busy === "google"} onClick={() => gsync("POST")}>同期</Button><Button size="sm" variant="ghost" busy={busy === "google"} onClick={() => { if (confirm("Google カレンダーの連携を解除しますか？")) gsync("DELETE"); }}>解除</Button></div>
+          ) : (
+            <a href="/api/google/auth" className="inline-flex items-center rounded-md bg-brand text-brand-ink px-3.5 py-2 text-sm font-medium">Google カレンダーと連携</a>
+          )}
+        </Card>
+      )}
+      <Card title="カレンダー取り込み（iCal URL）">
         <div className="flex flex-wrap gap-2 items-center">
           <input className={`${inputCls} flex-1 min-w-[16rem]`} placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" value={url} onChange={(e) => setUrl(e.target.value)} />
-          <Button variant="primary" busy={busy === "url"} onClick={() => sync("url")}>{url.trim() ? "保存して取り込む" : "連携を解除"}</Button>
+          <Button variant="primary" busy={busy === "url"} onClick={() => sync("url")}>{url.trim() ? "取り込む" : "解除"}</Button>
         </div>
-        <details className="mt-3 text-xs"><summary className="cursor-pointer text-brand">URL を使わず .ics の中身を貼り付ける</summary>
+        <details className="mt-3 text-xs"><summary className="cursor-pointer text-brand">.ics を貼り付ける</summary>
           <textarea className={`${inputCls} h-24 mt-2 font-mono text-[11px]`} placeholder="BEGIN:VCALENDAR …" value={icsText} onChange={(e) => setIcsText(e.target.value)} />
-          <Button size="sm" className="mt-1" busy={busy === "text"} disabled={!icsText.trim()} onClick={() => sync("text")}>貼り付けた内容を取り込む</Button>
+          <Button size="sm" className="mt-1" busy={busy === "text"} disabled={!icsText.trim()} onClick={() => sync("text")}>取り込む</Button>
         </details>
         {msg && <p className="text-xs text-ok mt-2">{msg}</p>}
         {err && <p className="text-xs text-danger mt-2">{err}</p>}

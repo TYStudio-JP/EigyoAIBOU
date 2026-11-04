@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { IdentifiedProduct } from "@eigyo/core/shared";
-import { Button, Card, inputCls, labelCls } from "./ui";
+import { Button, Card, inputCls } from "./ui";
 import { WebResearch } from "./web-research";
 import { yen } from "@/lib/format";
 
@@ -34,11 +34,11 @@ export function ProductPhoto({ aiEnabled, shareToken }: { aiEnabled: boolean; sh
             <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => pick(e.target.files?.[0] ?? null)} />
             {/* 端末内の blob URL のプレビューなので next/image は使わない */}
             {preview ? <img src={preview} alt="" className="mx-auto max-h-56 rounded" /> // eslint-disable-line @next/next/no-img-element
-               : <div className="text-sm text-muted">📷 タップして撮影、または写真を選ぶ{shareToken ? "（共有された写真を使う場合はそのまま下のボタン）" : ""}</div>}
+               : <div className="text-sm text-muted">📷 撮影 / 写真を選ぶ</div>}
           </label>
-          <div><label className={labelCls}>補足（任意）</label><input className={inputCls} placeholder="例: 切削工具、東海精密の第2ラインで使用" value={hint} onChange={(e) => setHint(e.target.value)} /></div>
+          <div><input className={inputCls} placeholder="補足（任意）" value={hint} onChange={(e) => setHint(e.target.value)} /></div>
           <Button variant="primary" className="w-full justify-center" busy={busy} disabled={!aiEnabled || (!file && !shareToken)} onClick={run} title={aiEnabled ? "" : "設定で AI を接続すると使えます"}>読み取って照合する</Button>
-          {!aiEnabled && <p className="text-xs text-warn">写真の読み取りには AI 接続が必要です。</p>}
+          {!aiEnabled && <p className="text-xs text-warn">AI 未接続</p>}
           {err && <p className="text-sm text-danger">{err}</p>}
         </div>
       </Card>
@@ -49,12 +49,12 @@ export function ProductPhoto({ aiEnabled, shareToken }: { aiEnabled: boolean; sh
             {rd.visible_text.length > 0 && <p className="text-xs text-muted mt-2">読めた文字: {rd.visible_text.join(" / ")}</p>}
           </Card>
           <Card title={`自社の取扱品との照合（${result.matches.length}）`}>
-            {result.matches.length === 0 ? <p className="text-sm text-muted">一致する取扱品はありません。下の同等品・ウェブ検索で探してください。</p> : (
+            {result.matches.length === 0 ? <p className="text-sm text-muted">一致なし</p> : (
               <ul className="divide-y divide-line text-sm">{result.matches.map((m) => <li key={m.product.id} className="py-2 flex items-center gap-2"><div className="flex-1 min-w-0"><div className="font-medium">{m.product.name}</div><div className="text-xs text-muted num">{m.product.code}・{m.product.maker} {m.product.part_number}{m.product.spec ? `・${m.product.spec}` : ""}　一致: {{ part_number: "品番", name: "品名", text: "読み取った文字" }[m.how]}</div></div>{m.best_cost != null && <span className="text-xs text-muted num">仕入 {yen(m.best_cost)}</span>}<Link href={`/quotes/new?product=${m.product.id}`} className="text-xs rounded border border-line px-2 py-1">見積りへ</Link></li>)}</ul>
             )}
             {result.similar.length > 0 && <div className="mt-3 text-xs"><div className="text-muted mb-1">同じ区分の取扱品（同等品の候補）</div><ul className="flex flex-wrap gap-1">{result.similar.map((p) => <li key={p.id} className="rounded bg-bg px-2 py-0.5">{p.name} <span className="text-muted num">{p.part_number}</span></li>)}</ul></div>}
           </Card>
-          <Card title="同等品・後継品をウェブで調べる"><WebResearch product={{ maker: rd.maker ?? "", part_number: rd.part_number ?? "", name: rd.name ?? result.research_query, spec: rd.spec ?? "" }} context={result.research_context} aiEnabled={aiEnabled} /></Card>
+          <Card title="ウェブで調べる"><WebResearch product={{ maker: rd.maker ?? "", part_number: rd.part_number ?? "", name: rd.name ?? result.research_query, spec: rd.spec ?? "" }} context={result.research_context} aiEnabled={aiEnabled} /></Card>
           <div className="text-right"><Link href={`/inquiries/new?text=${encodeURIComponent(`写真の商品について：${[rd.maker, rd.part_number, rd.name, rd.spec].filter(Boolean).join(" ")} の同等品・価格・納期`)}`} className="text-xs text-brand">この内容で問い合わせを記録 →</Link></div>
         </>
       )}

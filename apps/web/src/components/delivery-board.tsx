@@ -30,6 +30,13 @@ export function DeliveryBoard({ items }: { items: DeliveryWaiting[] }) {
     await fetch(`/api/quotes/${quoteId}/delivery`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ item_id: itemId, supplier_delivery: date }) });
     setBusy(null); router.refresh();
   };
+  /** 揃ってから納品するときは、待ちの全明細に同じ回答納期を入れる。 */
+  const recordAll = async (quoteId: number, date: string) => {
+    if (!date) return;
+    setBusy(-quoteId);
+    await fetch(`/api/quotes/${quoteId}/delivery`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ all: true, supplier_delivery: date }) });
+    setBusy(null); router.refresh();
+  };
   const setKind = async (quoteId: number, kind: "estimate" | "confirmed") => {
     await fetch(`/api/quotes/${quoteId}/delivery-kind`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind }) });
     router.refresh();
@@ -40,12 +47,12 @@ export function DeliveryBoard({ items }: { items: DeliveryWaiting[] }) {
   return (
     <>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <input className={`${inputCls} max-w-xs`} placeholder="得意先・商品・品番・見積番号で検索" value={q} onChange={(e) => setQ(e.target.value)} />
-        <label className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={onlyOverdue} onChange={(e) => setOnlyOverdue(e.target.checked)} />希望納期が 1 週間以内だけ</label>
+        <input className={`${inputCls} max-w-xs`} placeholder="検索" value={q} onChange={(e) => setQ(e.target.value)} />
+        <label className="flex items-center gap-1.5 text-xs"><input type="checkbox" checked={onlyOverdue} onChange={(e) => setOnlyOverdue(e.target.checked)} />1 週間以内のみ</label>
         <span className="text-xs text-muted ml-auto num">{filtered.length} / {items.length} 件</span>
       </div>
       <Card>
-        {filtered.length === 0 ? <Empty>{items.length === 0 ? "納期回答待ちはありません" : "条件に合うものはありません"}</Empty> : (
+        {filtered.length === 0 ? <Empty>{items.length === 0 ? "なし" : "該当なし"}</Empty> : (
           <ul className="divide-y divide-line">
             {filtered.map(({ quote: q, waiting_items, overdue }) => (
               <li key={q.id} className="py-3">
@@ -55,9 +62,12 @@ export function DeliveryBoard({ items }: { items: DeliveryWaiting[] }) {
                   <span className="text-xs text-muted num">{q.quote_no}</span>
                   {q.requested_delivery && <span className={`text-xs rounded px-1.5 py-0.5 ${overdue ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-700"}`}>希望納期 {dateJp(q.requested_delivery)}</span>}
                   {q.promised_delivery && <span className="text-xs rounded px-1.5 py-0.5 bg-blue-50 text-blue-700">回答納期 {dateJp(q.promised_delivery)}</span>}
-                  <button type="button" className={`text-[11px] rounded border px-1.5 py-0.5 ${q.delivery_kind === "confirmed" ? "bg-green-50 text-green-700 border-green-200" : "bg-amber-50 text-amber-800 border-amber-200"}`} title="クリックで概算／確定を切替" onClick={() => setKind(q.id, q.delivery_kind === "confirmed" ? "estimate" : "confirmed")}>{DELIVERY_KIND_LABEL[q.delivery_kind]}</button>
-                  <Button size="sm" className="ml-auto" onClick={() => showNotice(q.id, q.quote_no)}>得意先への納期連絡文</Button>
+                  <button type="button" className={`text-[11px] rounded border px-1.5 py-0.5 ${q.delivery_kind === "confirmed" ? "bg-green-50 text-green-700 border-green-200" : "bg-amber-50 text-amber-800 border-amber-200"}`} onClick={() => setKind(q.id, q.delivery_kind === "confirmed" ? "estimate" : "confirmed")}>{DELIVERY_KIND_LABEL[q.delivery_kind].replace(/（.*）/, "")}</button>
+                  <Button size="sm" className="ml-auto" onClick={() => showNotice(q.id, q.quote_no)}>連絡文</Button>
                 </div>
+                {waiting_items.length > 1 && (
+                  <div className="mt-2 flex items-center gap-2 text-xs"><span className="text-muted">全明細 同じ日</span><input type="date" className={`${inputCls} w-44`} onChange={(e) => recordAll(q.id, e.target.value)} disabled={busy === -q.id} /></div>
+                )}
                 <ul className="mt-2 space-y-1.5">
                   {waiting_items.map((it) => (
                     <li key={it.id} className="flex flex-wrap items-center gap-2 text-sm">
@@ -73,7 +83,7 @@ export function DeliveryBoard({ items }: { items: DeliveryWaiting[] }) {
       </Card>
       {notice && (
         <Modal title={`納期のご連絡 — ${notice.quote_no}`} onClose={() => setNotice(null)}>
-          {notice.late && <p className="text-sm text-danger mb-2">希望納期に間に合わない見込みです。分納・代替の提案文を含めています。</p>}
+          {notice.late && <p className="text-sm text-danger mb-2">希望納期に間に合いません（分納・代替の提案を含む）</p>}
           <div className="flex items-center justify-between mb-1"><div className="font-medium text-sm">{notice.subject}</div><CopyButton text={`件名: ${notice.subject}\n\n${notice.body}`} label="件名＋本文をコピー" /></div>
           <pre className="whitespace-pre-wrap bg-bg rounded-md p-3 text-sm font-sans leading-relaxed">{notice.body}</pre>
         </Modal>

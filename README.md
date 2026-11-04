@@ -80,6 +80,12 @@ npm run tunnel
 Cloudflare の無料トンネルで `https://xxxx.trycloudflare.com` のような URL が表示されます。スマホでその URL を開き、Safari（iPhone）なら共有メニューの「ホーム画面に追加」でアプリのように使えます。
 
 - **必ず `.env` に `EIGYO_ACCESS_KEY=好きな合言葉` を設定してください。** URL を知っている人は誰でも開けるためです。表示される `?key=...` 付きの URL を一度開くとスマホに記憶されます。
+- スマホで本格的に使うときは、開発サーバー（`npm run dev`）ではなく本番モードで動かしてください。開発モードは画面の再読み込みが頻繁に入り、トンネル越しだとタップが効かないように見えることがあります。
+
+```bat
+npm run build
+npm start
+```
 - 音声入力は iPhone は Safari、Android は Chrome で動きます。使えない場合はキーボードのマイクボタンで同じ欄に話せます。
 - トンネルの URL は起動のたびに変わります。固定したい場合は Cloudflare アカウントで名前付きトンネルを作るか、VPS 等に配置してください。
 

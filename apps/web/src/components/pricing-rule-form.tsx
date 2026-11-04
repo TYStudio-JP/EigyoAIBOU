@@ -37,9 +37,7 @@ export function PricingRuleForm({ customer }: { customer: Pick<Customer, "id" | 
           <select className={inputCls} value={unit} onChange={(e) => setUnit(Number(e.target.value))}>{ROUNDING_UNITS.map((u) => <option key={u} value={u}>{u === 1 ? "1 円単位" : `${u} 円単位で切り捨て`}</option>)}</select>
         </div>
       </div>
-      <p className="text-xs text-muted">
-        {mode === "none" ? "未設定：同じ得意先への前回単価 → 仕入れ先の標準掛率 → 他社向け平均の順で提案します。" : `例：仕入れ 1,234 円 → 売価 ${sample?.toLocaleString()} 円。前回単価がある商品は前回を優先し、違うときに「いつもの${mode === "markup" ? "掛率" : "粗利"}なら」を併記します。`}
-      </p>
+      {mode !== "none" && <p className="text-xs text-muted num">仕入れ 1,234 円 → {sample?.toLocaleString()} 円</p>}
       <div className="flex items-center gap-3"><Button variant="primary" size="sm" busy={busy} onClick={save}>保存</Button>{msg && <span className="text-xs text-muted">{msg}</span>}</div>
     </div>
   );

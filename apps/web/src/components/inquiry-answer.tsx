@@ -54,8 +54,8 @@ export function InquiryAnswer({ facts, aiEnabled, customers }: { facts: InquiryF
         {facts.customer?.contact_name && <div className="mt-1 text-xs text-muted">{facts.customer.contact_name} 様{facts.customer.tel && <a href={`tel:${facts.customer.tel}`} className="ml-2 text-brand">☎ {facts.customer.tel}</a>}</div>}
       </Card>
 
-      <Card title="社内記録（数字はここからだけ）">
-        {facts.products.length === 0 ? <p className="text-sm text-muted">商品を特定できませんでした。品番か商品名を質問文に足すか、種類を直してください。</p> : (
+      <Card title="社内記録">
+        {facts.products.length === 0 ? <p className="text-sm text-muted">商品を特定できません（品番・商品名を追加）</p> : (
           <ul className="space-y-2 text-sm">
             {facts.products.map((f) => (
               <li key={f.product.id} className="rounded-md border border-line p-2">
@@ -76,14 +76,14 @@ export function InquiryAnswer({ facts, aiEnabled, customers }: { facts: InquiryF
       </Card>
 
       <Card title="回答文" action={<div className="flex gap-1">
-        <Button size="sm" variant="primary" busy={busy === "draft"} onClick={() => run(false)} disabled={!aiEnabled} title={aiEnabled ? "" : "AI 未接続：社内記録の文面を使います"}>社内記録で作る</Button>
+        <Button size="sm" variant="primary" busy={busy === "draft"} onClick={() => run(false)} disabled={!aiEnabled} title="">社内記録で作る</Button>
         <Button size="sm" busy={busy === "web"} onClick={() => run(true)} disabled={!aiEnabled} title={aiEnabled ? "" : "AI 未接続"}>ウェブも調べて作る</Button>
       </div>}>
         {draft && (
           <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
             <LevelBadge level={draft.confidence === "high" ? "ok" : draft.confidence === "medium" ? "info" : "warn"}>{{ high: "社内記録で裏付けあり", medium: "ウェブ情報で補足", low: "要確認" }[draft.confidence]}</LevelBadge>
-            {aiUsed === false && <span className="text-muted">AI 未接続のため社内記録の文面</span>}
-            <span className="text-muted">次の一手: {draft.next_action}</span>
+            {aiUsed === false && <span className="text-muted">AI 未接続</span>}
+            <span className="text-muted">{draft.next_action}</span>
           </div>
         )}
         <div className="grid grid-cols-2 rounded-lg border border-line bg-bg p-0.5 text-sm mb-2">
@@ -91,7 +91,7 @@ export function InquiryAnswer({ facts, aiEnabled, customers }: { facts: InquiryF
           <button type="button" onClick={() => switchMode("mail")} className={`rounded-md py-1 ${mode === "mail" ? "bg-surface font-semibold shadow-sm" : "text-muted"}`}>メール</button>
         </div>
         <textarea className={`${inputCls} h-52 font-sans`} value={text} onChange={(e) => setText(e.target.value)} />
-        {draft && draft.open_points.length > 0 && <ul className="mt-2 text-xs text-warn list-disc pl-4">{draft.open_points.map((p, k) => <li key={k}>送る前に: {p}</li>)}</ul>}
+        {draft && draft.open_points.length > 0 && <ul className="mt-2 text-xs text-warn list-disc pl-4">{draft.open_points.map((p, k) => <li key={k}>{p}</li>)}</ul>}
         {web && <details className="mt-2 text-xs"><summary className="cursor-pointer text-brand">ウェブで調べた内容（出典 {web.sources.length} 件）</summary><pre className="whitespace-pre-wrap font-sans mt-1 bg-bg rounded p-2">{web.summary}</pre><ul className="mt-1">{web.sources.map((s) => <li key={s.url}><a href={s.url} target="_blank" rel="noreferrer" className="text-brand hover:underline">{s.title || s.url}</a></li>)}</ul></details>}
         <div className="mt-3 flex flex-wrap gap-2">
           <CopyButton text={text} label="コピー" />
