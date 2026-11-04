@@ -471,7 +471,7 @@ export function listCalls(db: Db, opts: { status?: CallStatus[]; customerId?: nu
   params.push(opts.limit ?? 50);
   return all<CallRecord>(db, `SELECT * FROM calls ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY started_at DESC, id DESC LIMIT ?`, ...params).map((c) => hydrateCall(db, c));
 }
-export function updateCall(db: Db, id: number, patch: Partial<Pick<CallRecord, "customer_id" | "contact_id" | "deal_id" | "tel" | "direction" | "memo" | "minutes_json" | "mail_subject" | "mail_body" | "status" | "duration_sec" | "started_at">>): CallWithCustomer {
+export function updateCall(db: Db, id: number, patch: Partial<Pick<CallRecord, "customer_id" | "contact_id" | "deal_id" | "tel" | "direction" | "memo" | "minutes_json" | "mail_subject" | "mail_body" | "status" | "duration_sec" | "started_at" | "process_state" | "process_error">>): CallWithCustomer {
   const keys = Object.keys(patch) as (keyof typeof patch)[];
   if (keys.length) {
     const set = keys.map((k) => `${k}=?`).join(", ");

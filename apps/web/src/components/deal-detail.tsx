@@ -7,9 +7,14 @@ import { Button, Card, inputCls, labelCls } from "./ui";
 import { DealStatusBadge } from "./deal-badge";
 import { dateJp, yen } from "@/lib/format";
 
+/** 要約の中の見積番号（Q202611-003）を、その見積りへのリンクにする。 */
+function Linkify({ text, quoteIds }: { text: string; quoteIds: Record<string, number> }) {
+  return <>{text.split(/(Q\d{6}-\d{3})/g).map((p, i) => quoteIds[p] ? <Link key={i} href={`/quotes/${quoteIds[p]}`} className="text-brand underline underline-offset-2">{p}</Link> : p)}</>;
+}
+
 const KIND_STYLE: Record<string, string> = { call: "bg-brand/10 text-brand", quote: "bg-blue-50 text-blue-700", followup: "bg-amber-50 text-amber-800", mail: "bg-green-50 text-green-700", handover: "bg-purple-50 text-purple-700", ai: "bg-gray-100 text-gray-600", status: "bg-gray-100 text-gray-700", note: "bg-gray-100 text-gray-700", created: "bg-gray-100 text-gray-500", link: "bg-gray-100 text-gray-500" };
 
-export function DealDetail({ deal, timeline, contacts, endCustomers, siblings, aiEnabled }: { deal: DealWithRefs; timeline: TimelineItem[]; contacts: Contact[]; endCustomers: EndCustomer[]; siblings: { id: number; title: string }[]; aiEnabled: boolean }) {
+export function DealDetail({ deal, timeline, contacts, endCustomers, siblings, quoteIds = {} }: { deal: DealWithRefs; timeline: TimelineItem[]; contacts: Contact[]; endCustomers: EndCustomer[]; siblings: { id: number; title: string }[]; aiEnabled?: boolean; quoteIds?: Record<string, number> }) {
   const router = useRouter();
   const [detail, setDetail] = useState(false);
   const [edit, setEdit] = useState(false);
@@ -47,14 +52,14 @@ export function DealDetail({ deal, timeline, contacts, endCustomers, siblings, a
       </div>
 
       <Card title="経緯と状況" action={<div className="flex gap-2"><Button size="sm" onClick={() => setEdit(!edit)}>{edit ? "閉じる" : "編集"}</Button><Button size="sm" variant="primary" busy={busy === "refresh"} onClick={() => call("refresh", `/api/deals/${deal.id}/refresh`, {})}>要約を更新</Button></div>}>
-        <pre className="whitespace-pre-wrap text-sm font-sans leading-relaxed">{deal.summary || "（まだ要約がありません。「要約を更新」を押してください）"}</pre>
+        <pre className="whitespace-pre-wrap text-sm font-sans leading-relaxed">{deal.summary ? <Linkify text={deal.summary} quoteIds={quoteIds} /> : "まだ要約がありません。「要約を更新」を押してください"}</pre>
         <div className={`mt-3 rounded-md px-3 py-2 text-sm ${overdue ? "bg-red-50 border border-red-200 text-red-900" : "bg-blue-50 border border-blue-200 text-blue-900"}`}>
           <b>次の一手:</b> {deal.next_action || "未設定"}{deal.next_action_due && <span className="ml-2 text-xs">期限 {dateJp(deal.next_action_due)}{overdue ? "（期限切れ）" : ""}</span>}
         </div>
         {deal.summary_detail && (
           <div className="mt-2">
             <button type="button" className="text-xs text-brand hover:underline" onClick={() => setDetail(!detail)}>{detail ? "詳細を閉じる" : "詳細を見る"}</button>
-            {detail && <pre className="whitespace-pre-wrap text-xs text-muted font-sans leading-relaxed mt-2 bg-bg rounded-md p-3">{deal.summary_detail}</pre>}
+            {detail && <pre className="whitespace-pre-wrap text-xs text-muted font-sans leading-relaxed mt-2 bg-bg rounded-md p-3"><Linkify text={deal.summary_detail} quoteIds={quoteIds} /></pre>}
           </div>
         )}
         {edit && (
@@ -76,13 +81,15 @@ export function DealDetail({ deal, timeline, contacts, endCustomers, siblings, a
 
       <Card title="時系列" action={<button type="button" className="text-xs text-brand hover:underline" onClick={() => setFix(!fix)}>{fix ? "修正を閉じる" : "紐づけを直す"}</button>}>
         <ul className="space-y-2">
-          {timeline.map((it, i) => (
+          {timeline.map((it, i) => {
+            const href = it.ref_type === "quote" && it.ref_id ? `/quotes/${it.ref_id}` : it.ref_type === "call" && it.ref_id ? `/calls/${it.ref_id}` : null;
+            const badge = `inline-block rounded px-1.5 py-0.5 text-[11px] font-semibold ${KIND_STYLE[it.kind] ?? "bg-gray-100"}`;
+            return (
             <li key={i} className="flex gap-2 text-sm">
-              <span className="text-xs text-muted num shrink-0 w-24 pt-0.5">{it.at.slice(0, 16).replace("T", " ")}</span>
-              <span className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold h-fit ${KIND_STYLE[it.kind] ?? "bg-gray-100"}`}>{it.title.split(" ")[0]}</span>
+              <span className="text-xs text-muted num shrink-0 w-24 pt-0.5">{dateJp(it.at)} {it.at.slice(11, 16)}</span>
               <div className="min-w-0 flex-1">
-                <div>{it.ref_type === "quote" && it.ref_id ? <Link href={`/quotes/${it.ref_id}`} className="font-medium hover:underline">{it.title}</Link> : it.ref_type === "call" && it.ref_id ? <Link href={`/calls/${it.ref_id}`} className="font-medium hover:underline">{it.title}</Link> : <span className="font-medium">{it.title}</span>}</div>
-                <div className={`text-xs ${it.kind === "handover" ? "text-purple-700 font-semibold" : "text-muted"}`}>{it.body}</div>
+                <div>{href ? <Link href={href} className={`${badge} underline underline-offset-2`}>{it.title} →</Link> : <span className={badge}>{it.title}</span>}</div>
+                <div className={`text-xs mt-0.5 ${it.kind === "handover" ? "text-purple-700 font-semibold" : "text-muted"}`}>{it.body}</div>
                 {fix && (it.kind === "quote" || it.kind === "call") && it.ref_id && (
                   <select className="mt-1 text-xs rounded border border-line px-2 py-1" defaultValue="" onChange={(e) => move(it, e.target.value)}>
                     <option value="">別の案件へ移す…</option>
@@ -92,7 +99,8 @@ export function DealDetail({ deal, timeline, contacts, endCustomers, siblings, a
                 )}
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </Card>
     </div>

@@ -27,6 +27,8 @@ export * from "./ai/draft";
 export * from "./ai/fallback";
 export * from "./ai/call";
 export * from "./domain/call-actions";
+export * from "./domain/call-process";
+export * from "./domain/rep-name";
 export * from "./domain/deals";
 export * from "./domain/handover";
 export * from "./ai/deals";

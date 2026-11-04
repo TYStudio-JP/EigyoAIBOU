@@ -285,6 +285,8 @@ export interface CallRecord {
   mail_subject: string | null;
   mail_body: string | null;
   status: CallStatus;
+  process_state: "running" | "cancel" | null;
+  process_error: string | null;
   created_at: string;
   updated_at: string;
 }

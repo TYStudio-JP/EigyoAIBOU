@@ -272,6 +272,8 @@ CREATE TABLE IF NOT EXISTS calls (
   mail_subject  TEXT,
   mail_body     TEXT,
   status        TEXT NOT NULL CHECK (status IN ('open','processed','sent','closed')) DEFAULT 'open',
+  process_state TEXT,            -- 裏で処理中: 'running' / 'cancel'（キャンセル要求）/ NULL
+  process_error TEXT,            -- 直近の処理が失敗したときの理由
   created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime')),
   updated_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );

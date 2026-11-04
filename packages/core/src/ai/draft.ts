@@ -1,3 +1,4 @@
+import { repSurname } from "../domain/rep-name";
 import { z } from "zod";
 import { betaZodOutputFormat as zodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { AiUnavailableError, FALLBACK_BETAS, MODEL, SYSTEM_BASE, getClient, hasApiKey } from "./client";
@@ -24,7 +25,7 @@ function quoteSummary(q: QuoteWithItems, settings: Settings): string {
 明細:
 ${lines.join("\n")}
 得意先メモ: ${q.customer.notes}
-自社: ${settings.company_name} ${settings.sales_rep}`;
+自社: ${settings.company_name} ${settings.sales_rep}（名乗りは「${repSurname(settings.sales_rep)}」）`;
 }
 
 /** 提出済み見積りのフォローアップ（メール＋電話トーク）を下書きする。 */
@@ -62,7 +63,7 @@ export async function draftSupplierInquiry(params: { supplier_name: string; prod
     betas: [...FALLBACK_BETAS],
     fallbacks: "default",
     system: [{ type: "text", text: SYSTEM_BASE + "\n\nいまの役割: 仕入れ先・メーカーへの問い合わせメール作成。相手が即答できるよう、品番・数量・希望納期・回答期限を明記する。", cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: `本日: ${p.today}\n宛先: ${p.supplier_name}\n自社: ${p.settings.company_name} ${p.settings.sales_rep}\n商品: ${p.product_desc} × ${p.qty}${p.unit}\n得意先希望納期: ${p.requested_delivery ?? "未定"}\n確認したいこと: ${p.question}` }],
+    messages: [{ role: "user", content: `本日: ${p.today}\n宛先: ${p.supplier_name}\n自社: ${p.settings.company_name} ${p.settings.sales_rep}（名乗りは「${repSurname(p.settings.sales_rep)}」）\n商品: ${p.product_desc} × ${p.qty}${p.unit}\n得意先希望納期: ${p.requested_delivery ?? "未定"}\n確認したいこと: ${p.question}` }],
     output_config: { format: zodOutputFormat(InquirySchema), effort: "low" },
   });
   if (!res.parsed_output) throw new Error("AI の応答を解析できませんでした");
@@ -94,7 +95,7 @@ export async function draftCrossSellProposal(result: CrossSellResult, settings: 
     betas: [...FALLBACK_BETAS],
     fallbacks: "default",
     system: [{ type: "text", text: SYSTEM_BASE + "\n\nいまの役割: 同業他社の購買実績をもとにした横展開提案。他社の社名は出さず『同業のお客様』と表現する。得意先の業種・メモに合わせて具体的に。", cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: `本日: ${today}\n自社: ${settings.company_name} ${settings.sales_rep}\n\n提案先: ${result.customer.name}（${result.customer.industry}・${result.customer.prefecture}）担当 ${result.customer.contact_name ?? ""}\n得意先メモ: ${result.customer.notes}\n\n候補商品:\n${cands}` }],
+    messages: [{ role: "user", content: `本日: ${today}\n自社: ${settings.company_name} ${settings.sales_rep}（名乗りは「${repSurname(settings.sales_rep)}」）\n\n提案先: ${result.customer.name}（${result.customer.industry}・${result.customer.prefecture}）担当 ${result.customer.contact_name ?? ""}\n得意先メモ: ${result.customer.notes}\n\n候補商品:\n${cands}` }],
     output_config: { format: zodOutputFormat(ProposalSchema), effort: "medium" },
   });
   if (!res.parsed_output) throw new Error("AI の応答を解析できませんでした");

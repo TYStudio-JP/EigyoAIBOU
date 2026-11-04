@@ -7,6 +7,7 @@ import { CALL_REQUEST_LABEL, CALL_STATUS_LABEL } from "@eigyo/core/shared";
 import { Button, Card, LevelBadge, inputCls } from "./ui";
 import { CopyButton } from "./modal";
 import { CallMemo } from "./call-memo";
+import { CallProcessing } from "./call-processing";
 
 export function CallDetail({ call, customers, contacts, aiEnabled, fresh, deal, dealOptions }: { call: CallWithCustomer; customers: Customer[]; contacts: Contact[]; aiEnabled: boolean; fresh?: boolean; deal?: { id: number; title: string } | null; dealOptions?: { id: number; title: string }[] }) {
   const router = useRouter();
@@ -32,6 +33,7 @@ export function CallDetail({ call, customers, contacts, aiEnabled, fresh, deal, 
   };
   const dur = call.duration_sec ? `${Math.floor(call.duration_sec / 60)}分${call.duration_sec % 60}秒` : "";
   const needs = m?.requests.filter((r) => r.result?.status === "needs_human").length ?? 0;
+  const processing = call.process_state === "running" || call.process_state === "cancel";
 
   return (
     <div className="space-y-4">
@@ -56,13 +58,16 @@ export function CallDetail({ call, customers, contacts, aiEnabled, fresh, deal, 
         {fresh && !m && <div className="mt-2 rounded-md bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-900">通話が終わりました。要点を記録してください。</div>}
       </div>
 
-      {(editMemo || !m) && (
+      {processing && <CallProcessing callId={call.id} state={call.process_state!} />}
+      {!processing && call.process_error && <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">作成できませんでした：{call.process_error}</div>}
+
+      {!processing && (editMemo || !m) && (
         <Card title={m ? "メモを修正して再処理" : "電話メモ"} action={m ? <Button size="sm" onClick={() => setEditMemo(false)}>閉じる</Button> : undefined}>
           <CallMemo call={call} customers={customers} contacts={contacts} aiEnabled={aiEnabled} autostart={fresh} />
         </Card>
       )}
 
-      {m && (
+      {m && !processing && (
         <>
           <Card title="議事録" action={<div className="flex gap-2">{!editMemo && <Button size="sm" onClick={() => setEditMemo(true)}>メモを修正</Button>}<Button size="sm" busy={busy === "re"} onClick={() => post("re", `/api/calls/${call.id}/process`, {})} disabled={!aiEnabled}>再処理</Button></div>}>
             <pre className="whitespace-pre-wrap text-sm font-sans leading-relaxed">{m.summary}</pre>
@@ -117,7 +122,7 @@ export function CallDetail({ call, customers, contacts, aiEnabled, fresh, deal, 
         </>
       )}
       {err && <p className="text-sm text-danger">{err}</p>}
-      {call.memo && m && !editMemo && <Card title="元のメモ"><pre className="whitespace-pre-wrap text-xs text-muted font-sans">{call.memo}</pre></Card>}
+      {call.memo && (processing || (m && !editMemo)) && <Card title="元のメモ"><pre className="whitespace-pre-wrap text-xs text-muted font-sans">{call.memo}</pre></Card>}
     </div>
   );
 }

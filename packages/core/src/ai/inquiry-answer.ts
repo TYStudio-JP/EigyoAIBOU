@@ -1,3 +1,4 @@
+import { repSurname } from "../domain/rep-name";
 import { z } from "zod";
 import { betaZodOutputFormat as zodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { AiUnavailableError, FALLBACK_BETAS, MODEL, SYSTEM_BASE, getClient, hasApiKey } from "./client";
@@ -32,7 +33,7 @@ export async function draftInquiryAnswer(facts: InquiryFacts, settings: { compan
   const res = await getClient().beta.messages.parse({
     model: MODEL, max_tokens: 3000, betas: [...FALLBACK_BETAS], fallbacks: "default",
     system: [{ type: "text", text: SYSTEM_BASE + "\n\nいまの役割: 得意先からの問い合わせへの回答文作成。仕入れ値・他社向け価格・仕入れ先名は得意先に出さない。社内記録に無い数字は書かず『確認のうえご連絡します』とする。ウェブ情報は『メーカー公開情報では』と断る。", cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: `本日: ${today}\n自社: ${settings.company_name} ${settings.sales_rep}\n\n【問い合わせ】（${INQUIRY_KIND_LABEL[i.kind]}）\n${i.question}\n\n【社内記録】\n${JSON.stringify(internal, null, 1)}\n\n【ウェブ調査】\n${web ? `${web.summary}\n出典: ${web.sources.map((s) => s.url).join(" ")}` : "（なし）"}\n\n短文回答とメール回答を作成してください。` }],
+    messages: [{ role: "user", content: `本日: ${today}\n自社: ${settings.company_name} ${settings.sales_rep}（名乗りは「${repSurname(settings.sales_rep)}」）\n\n【問い合わせ】（${INQUIRY_KIND_LABEL[i.kind]}）\n${i.question}\n\n【社内記録】\n${JSON.stringify(internal, null, 1)}\n\n【ウェブ調査】\n${web ? `${web.summary}\n出典: ${web.sources.map((s) => s.url).join(" ")}` : "（なし）"}\n\n短文回答とメール回答を作成してください。` }],
     output_config: { format: zodOutputFormat(Schema), effort: "medium" },
   });
   if (!res.parsed_output) throw new Error("AI の応答を解析できませんでした");

@@ -36,7 +36,10 @@ export function applyDealStatus(db: Db, dealId: number, asOf: string = today()):
 }
 
 // ---------- タイムライン ----------
-export interface TimelineItem { at: string; kind: string; title: string; body: string; ref_type: string | null; ref_id: number | null }
+/** 画面の 1 行。title は短い見出し（「見積り提出」「フォロー」）。見積番号は quote_no に分けて持つ（画面では出さず、AI の要約には渡す）。 */
+export interface TimelineItem { at: string; kind: string; title: string; body: string; ref_type: string | null; ref_id: number | null; quote_no?: string | null }
+/** AI や MCP に渡す 1 行表記（見積番号つき）。 */
+export const timelineLine = (t: TimelineItem): string => `${t.at.slice(0, 16)} [${t.title}${t.quote_no ? " " + t.quote_no : ""}] ${t.body}`;
 export function dealTimeline(db: Db, dealId: number): TimelineItem[] {
   const items: TimelineItem[] = [];
   for (const e of listDealEvents(db, dealId)) {
@@ -44,15 +47,15 @@ export function dealTimeline(db: Db, dealId: number): TimelineItem[] {
     items.push({ at: e.created_at, kind: e.kind, title: { created: "案件作成", status: "状態変更", link: "紐づけ", note: "メモ", ai: "営業AI棒", mail: "メール", handover: "担当引継ぎ" }[e.kind] ?? e.kind, body: e.body, ref_type: e.ref_type, ref_id: e.ref_id });
   }
   for (const q of listQuotes(db, { dealId, limit: 100 })) {
-    items.push({ at: q.created_at, kind: "quote", title: `見積り ${q.quote_no}（${STATUS_LABEL[q.status]}）`, body: `${q.subject}　${Math.round(q.total).toLocaleString()}円`, ref_type: "quote", ref_id: q.id });
+    items.push({ at: q.created_at, kind: "quote", title: q.status === "draft" ? "見積り作成" : "見積り提出", body: `${q.subject}　${Math.round(q.total).toLocaleString()}円`, ref_type: "quote", ref_id: q.id, quote_no: q.quote_no });
     for (const a of listActivities(db, q.id)) {
       if (a.kind === "created") continue;
-      items.push({ at: a.created_at, kind: a.kind === "followup" ? "followup" : a.kind, title: `${q.quote_no} ${{ followup: "フォロー", status: "状態", ai: "営業AI棒", note: "メモ" }[a.kind] ?? a.kind}`, body: a.body, ref_type: "quote", ref_id: q.id });
+      items.push({ at: a.created_at, kind: a.kind === "followup" ? "followup" : a.kind, title: { followup: "フォロー", status: "状態変更", ai: "営業AI棒", note: "メモ" }[a.kind] ?? a.kind, body: a.body, ref_type: "quote", ref_id: q.id, quote_no: q.quote_no });
     }
   }
   for (const c of listCalls(db, { dealId, limit: 100 })) {
     const first = c.minutes?.summary.split("\n").map((l) => l.replace(/^・/, "")).filter(Boolean) ?? [];
-    items.push({ at: c.started_at, kind: "call", title: `電話（${{ in: "着信", out: "発信", unknown: "通話" }[c.direction]}）${c.contact ? c.contact.name : ""}`, body: first.slice(0, 3).join(" / ") || c.memo.slice(0, 80) || "メモ未入力", ref_type: "call", ref_id: c.id });
+    items.push({ at: c.started_at, kind: "call", title: `${{ in: "着信", out: "発信", unknown: "電話" }[c.direction]}${c.contact ? " " + c.contact.name : ""}`, body: first.slice(0, 3).join(" / ") || c.memo.slice(0, 80) || "メモ未入力", ref_type: "call", ref_id: c.id });
     if (c.status === "sent") items.push({ at: c.updated_at, kind: "mail", title: "確認メール送付", body: c.mail_subject ?? "", ref_type: "call", ref_id: c.id });
   }
   return items.sort((a, b) => b.at.localeCompare(a.at));

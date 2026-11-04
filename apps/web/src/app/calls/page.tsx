@@ -20,7 +20,7 @@ export default function CallsPage() {
             <div className="text-xs text-muted truncate">{c.started_at.slice(5, 16)}　{c.minutes ? c.minutes.summary.split("\n")[0].replace(/^・/, "") : c.memo ? c.memo.slice(0, 40) : "メモ未入力"}</div>
           </div>
           <div className="text-right shrink-0">
-            <div className={`text-xs font-semibold ${c.status === "open" ? "text-warn" : c.status === "processed" ? "text-info" : "text-ok"}`}>{CALL_STATUS_LABEL[c.status]}</div>
+            <div className={`text-xs font-semibold ${c.process_state ? "text-brand" : c.status === "open" ? "text-warn" : c.status === "processed" ? "text-info" : "text-ok"}`}>{c.process_state ? "作成中" : CALL_STATUS_LABEL[c.status]}</div>
             {needs > 0 && <div className="text-[11px] text-warn">担当確認 {needs}</div>}
           </div>
         </Link>

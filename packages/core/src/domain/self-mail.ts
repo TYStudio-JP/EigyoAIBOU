@@ -1,3 +1,4 @@
+import { repSurname } from "./rep-name";
 /**
  * 自分宛てメール：営業AI棒は得意先に直接送らない。完成品（見積書・文面・チェック結果）を営業担当本人へメールし、
  * 本人がいつもの文面で得意先へ転送する（「自分にメールしてくれる事務員」）。
@@ -34,7 +35,7 @@ const yen = (n: number) => `${Math.round(n).toLocaleString("ja-JP")}円`;
 
 /** 見積書を自分宛てに送るときの件名・本文（得意先向け送付文の例＋チェック結果＋明細）。決定的テンプレート。 */
 export function buildSelfMail(q: QuoteWithItems, settings: Settings, checks: { line_no: number; description: string; checks: PriceCheck[] }[], opts: { appUrl?: string; kind?: "formal" | "provisional"; provisionalText?: string | null } = {}): SelfMailPackage {
-  const rep = settings.sales_rep.split(" ").pop() ?? settings.sales_rep;
+  const rep = repSurname(settings.sales_rep);
   const tax = Math.round(q.total * settings.tax_rate);
   const customer_subject = `お見積書送付の件：${q.subject}（${q.quote_no}）`;
   const customer_body = [

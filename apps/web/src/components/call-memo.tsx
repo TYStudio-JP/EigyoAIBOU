@@ -38,6 +38,7 @@ export function CallMemo({ call, customers, contacts, aiEnabled, autostart }: { 
     setBusy("process"); setErr(null);
     try {
       const id = await ensureCall();
+      // 裏で動き出すのですぐ戻る。詳細画面が進み具合とキャンセルを出す
       const r = await fetch(`/api/calls/${id}/process`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error);
