@@ -80,6 +80,10 @@ function migrate(db: DatabaseSync): void {
   add("quote_items", "supplier_quote_min_lot", "INTEGER");
   add("quote_items", "supplier_quote_note", "TEXT");
   add("quote_items", "supplier_quote_at", "TEXT");
+  // Google カレンダー連携
+  add("users", "google_refresh_token", "TEXT");
+  add("users", "google_calendar_id", "TEXT");
+  add("users", "google_email", "TEXT");
 }
 
 export function dbExists(path: string = defaultDbPath()): boolean {

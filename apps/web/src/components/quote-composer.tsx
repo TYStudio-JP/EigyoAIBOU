@@ -9,12 +9,12 @@ import { InquiryModal } from "./inquiry-modal";
 
 type Sample = { label: string; type: "email" | "memo"; text: string };
 
-export function QuoteComposer({ customers, contacts, samples, aiEnabled }: { customers: Customer[]; contacts: Contact[]; samples: Sample[]; aiEnabled: boolean }) {
+export function QuoteComposer({ customers, contacts, samples, aiEnabled, initialText = "", initialCustomerId = null }: { customers: Customer[]; contacts: Contact[]; samples: Sample[]; aiEnabled: boolean; initialText?: string; initialCustomerId?: number | null }) {
   const router = useRouter();
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const [sourceType, setSourceType] = useState<"email" | "memo" | "file">("email");
   const [file, setFile] = useState<File | null>(null);
-  const [preCustomer, setPreCustomer] = useState<number | "">("");
+  const [preCustomer, setPreCustomer] = useState<number | "">(initialCustomerId ?? "");
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);

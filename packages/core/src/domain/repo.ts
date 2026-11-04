@@ -640,7 +640,7 @@ export function createUser(db: Db, u: { name: string; department?: string; email
   const res = db.prepare("INSERT INTO users(name,department,email,status,target_sales,target_margin) VALUES(?,?,?,?,?,?)").run(u.name, u.department ?? "", u.email ?? null, u.status ?? "active", u.target_sales ?? null, u.target_margin ?? null);
   return getUser(db, Number(res.lastInsertRowid))!;
 }
-export function updateUser(db: Db, id: number, patch: Partial<Pick<User, "name" | "department" | "email" | "status" | "target_sales" | "target_margin" | "proxy_send_allowed" | "calendar_ics_url">>): User {
+export function updateUser(db: Db, id: number, patch: Partial<Pick<User, "name" | "department" | "email" | "status" | "target_sales" | "target_margin" | "proxy_send_allowed" | "calendar_ics_url" | "google_refresh_token" | "google_calendar_id" | "google_email">>): User {
   const keys = Object.keys(patch) as (keyof typeof patch)[];
   if (keys.length) db.prepare(`UPDATE users SET ${keys.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...keys.map((k) => patch[k] as string | number | null), id);
   return getUser(db, id)!;
@@ -717,6 +717,49 @@ export function pruneIcsVisits(db: Db, userId: number, keepExternalIds: Set<stri
   for (const r of rows) if (r.external_id && !keepExternalIds.has(r.external_id)) { deleteVisit(db, r.id); n++; }
   return n;
 }
+
+// ---------- 問い合わせ回答 ----------
+import type { Inquiry, InquiryChannel, InquiryKind, InquiryStatus, InquiryWithRefs, ShareItem } from "./types";
+function hydrateInquiry(db: Db, i: Inquiry): InquiryWithRefs { return { ...i, customer: i.customer_id ? getCustomer(db, i.customer_id) : null, contact: i.contact_id ? getContact(db, i.contact_id) : null }; }
+export function createInquiry(db: Db, i: { user_id?: number | null; customer_id?: number | null; contact_id?: number | null; deal_id?: number | null; channel?: InquiryChannel; kind?: InquiryKind; question: string; due?: string | null; source?: string }): InquiryWithRefs {
+  const now = nowStamp();
+  const res = db.prepare("INSERT INTO inquiries(user_id,customer_id,contact_id,deal_id,channel,kind,question,status,due,source,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)")
+    .run(i.user_id ?? null, i.customer_id ?? null, i.contact_id ?? null, i.deal_id ?? null, i.channel ?? "mail", i.kind ?? "other", i.question, "open", i.due ?? null, i.source ?? "manual", now, now);
+  return getInquiry(db, Number(res.lastInsertRowid))!;
+}
+export function getInquiry(db: Db, id: number): InquiryWithRefs | null {
+  const i = one<Inquiry>(db, "SELECT * FROM inquiries WHERE id=?", id);
+  return i ? hydrateInquiry(db, i) : null;
+}
+export function listInquiries(db: Db, opts: { status?: InquiryStatus[]; customerId?: number; userId?: number | null; limit?: number } = {}): InquiryWithRefs[] {
+  const where: string[] = []; const params: (string | number)[] = [];
+  if (opts.status?.length) { where.push(`status IN (${opts.status.map(() => "?").join(",")})`); params.push(...opts.status); }
+  if (opts.customerId) { where.push("customer_id=?"); params.push(opts.customerId); }
+  if (opts.userId) { where.push("(user_id=? OR user_id IS NULL)"); params.push(opts.userId); }
+  params.push(opts.limit ?? 100);
+  return all<Inquiry>(db, `SELECT * FROM inquiries ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY CASE status WHEN 'open' THEN 0 ELSE 1 END, COALESCE(due,'9999') ASC, created_at DESC LIMIT ?`, ...params).map((i) => hydrateInquiry(db, i));
+}
+export function updateInquiry(db: Db, id: number, patch: Partial<Pick<Inquiry, "customer_id" | "contact_id" | "deal_id" | "channel" | "kind" | "question" | "answer" | "answer_channel" | "status" | "due" | "answered_at">>): InquiryWithRefs {
+  const keys = Object.keys(patch) as (keyof typeof patch)[];
+  if (keys.length) db.prepare(`UPDATE inquiries SET ${keys.map((k) => `${k}=?`).join(", ")}, updated_at=? WHERE id=?`).run(...keys.map((k) => patch[k] as string | number | null), nowStamp(), id);
+  return getInquiry(db, id)!;
+}
+export function deleteInquiry(db: Db, id: number): void { db.prepare("DELETE FROM inquiries WHERE id=?").run(id); }
+
+// ---------- 共有メニューからの一時保管（1 時間で消す） ----------
+export function createShareItem(db: Db, s: { token: string; title?: string; text?: string; url?: string; file_name?: string | null; file_mime?: string | null; file_blob?: Buffer | null }): ShareItem {
+  db.prepare("DELETE FROM share_inbox WHERE created_at < datetime('now','localtime','-1 hour')").run();
+  db.prepare("INSERT INTO share_inbox(token,title,text,url,file_name,file_mime,file_blob,created_at) VALUES(?,?,?,?,?,?,?,?)").run(s.token, s.title ?? "", s.text ?? "", s.url ?? "", s.file_name ?? null, s.file_mime ?? null, s.file_blob ?? null, nowStamp());
+  return getShareItem(db, s.token)!;
+}
+export function getShareItem(db: Db, token: string): ShareItem | null {
+  return one<ShareItem>(db, "SELECT id, token, title, text, url, file_name, file_mime, created_at FROM share_inbox WHERE token=? AND created_at >= datetime('now','localtime','-1 hour')", token);
+}
+export function getShareFile(db: Db, token: string): { name: string; mime: string; blob: Buffer } | null {
+  const r = db.prepare("SELECT file_name, file_mime, file_blob FROM share_inbox WHERE token=? AND file_blob IS NOT NULL").get(token) as { file_name: string; file_mime: string; file_blob: Uint8Array } | undefined;
+  return r ? { name: r.file_name, mime: r.file_mime, blob: Buffer.from(r.file_blob) } : null;
+}
+export function deleteShareItem(db: Db, token: string): void { db.prepare("DELETE FROM share_inbox WHERE token=?").run(token); }
 
 // ---------- メーカー回答（明細の仕入れ回答） ----------
 export function updateQuoteItem(db: Db, itemId: number, patch: Partial<Pick<QuoteItem, "unit_price" | "cost" | "supplier_id" | "supplier_delivery" | "remarks" | "supplier_quote_price" | "supplier_quote_valid_until" | "supplier_quote_min_lot" | "supplier_quote_note" | "supplier_quote_at">>): QuoteItem | null {

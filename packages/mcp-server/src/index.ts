@@ -17,6 +17,7 @@ import {
   adjudicateDealLink, applyDealStatus, attachCallToDeal, attachQuoteToDeal, dealTimeline, getDeal, handoverCustomer, handoverFacts, listContacts, listDeals, listUsers, refreshDealSummary, DEAL_STATUS_LABEL, CONTACT_STATUS_LABEL,
   buildKeijo, deliveryWaitingList, recordSupplierDelivery, deliveryNotice, priceImpact, reportFacts, reportDraft, visitBrief, listSuppliers, researchWeb,
   findRepoRoot, replyQueue, markProvisional, markFormalSent, formalDiff, provisionalText, pendingFormalList, PROVISIONAL_CHANNEL_LABEL, type ProvisionalChannel,
+  logInquiryFromText, inquiryFacts, answerInquiry, listInquiries, INQUIRY_KIND_LABEL, INQUIRY_CHANNEL_LABEL, type InquiryChannel,
   type LostReason, type NewQuoteItem, type QuoteStatus,
 } from "@eigyo/core";
 
@@ -196,6 +197,35 @@ server.registerTool("mark_formal_sent", {
   if (check_only) return text({ quote_no, pending: Boolean(q.provisional_at && !q.formal_sent_at), diff, still_pending: pendingFormalList(db).length });
   const after = markFormalSent(db, q.id);
   return text({ quote_no, formal_sent_at: after.formal_sent_at, diff_at_send: diff });
+});
+
+server.registerTool("log_inquiry", {
+  title: "問い合わせを記録",
+  description: "得意先からの問い合わせ（仕様・納期・在庫・同等品・価格）を記録し、社内記録から集めた回答材料と、社内記録だけで書ける回答文の下書きを返す。得意先と種類は文面から推定。送るのは人。",
+  inputSchema: { question: z.string().describe("問い合わせの文面（メール本文・電話で聞いた内容）"), customer: z.string().optional().describe("得意先コードまたは名称（省略時は文面から推定）"), channel: z.enum(["mail", "phone", "line", "sms", "visit", "other"]).optional() },
+}, async ({ question, customer, channel }) => {
+  const c = customer ? resolveCustomer(customer) : null;
+  const iq = logInquiryFromText(db, question, { customer_id: c?.id ?? null, channel: (channel ?? "mail") as InquiryChannel, source: "mcp" });
+  const f = inquiryFacts(db, iq.id);
+  return text({ id: iq.id, customer: iq.customer?.name ?? null, kind: INQUIRY_KIND_LABEL[iq.kind], products: f.products.map((x) => ({ name: x.product.name, part_number: x.product.part_number, earliest_delivery: x.earliest_delivery, last_price_to_customer: x.last_price_to_customer, routes: x.routes.map((r) => ({ supplier: r.supplier_name, cost: r.cost, lead_days: r.lead_time_days })) })), open_points: f.open_points, draft_answer: f.deterministic_answer, url: `http://localhost:3000/inquiries/${iq.id}` });
+});
+
+server.registerTool("list_inquiries", {
+  title: "問い合わせ一覧",
+  description: "未回答（既定）または回答済みの問い合わせを返す。",
+  inputSchema: { status: z.enum(["open", "answered", "closed"]).optional(), customer: z.string().optional() },
+}, async ({ status, customer }) => {
+  const c = customer ? resolveCustomer(customer) : null;
+  return text(listInquiries(db, { status: [status ?? "open"], customerId: c?.id, limit: 50 }).map((i) => ({ id: i.id, customer: i.customer?.short_name ?? null, kind: INQUIRY_KIND_LABEL[i.kind], channel: INQUIRY_CHANNEL_LABEL[i.channel], question: i.question.slice(0, 120), due: i.due, created_at: i.created_at, status: i.status })));
+});
+
+server.registerTool("answer_inquiry", {
+  title: "問い合わせに回答したと記録",
+  description: "得意先に送った回答文と手段を記録し、回答済みにする（営業AI棒は得意先に送らない。送ったのは人）。",
+  inputSchema: { id: z.number().int(), answer: z.string(), channel: z.enum(["mail", "phone", "line", "sms", "visit", "other"]).optional() },
+}, async ({ id, answer, channel }) => {
+  const i = answerInquiry(db, id, answer, (channel ?? "mail") as InquiryChannel);
+  return text({ id: i.id, status: i.status, answered_at: i.answered_at });
 });
 
 server.registerTool("record_followup", {

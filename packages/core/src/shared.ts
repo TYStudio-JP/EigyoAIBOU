@@ -33,3 +33,7 @@ export { IMPORT_KIND_LABEL } from "./domain/import";
 export type { IcsEvent, IcsSyncResult, NextVisit, HomeMode } from "./domain/visits";
 export { stampOf, dateOf } from "./domain/visits";
 export type { SupplierQuoteInput, SupplierQuoteResult, SupplierReplyFields } from "./domain/supplier-quote";
+export type { InquiryFacts, InquiryProductFact } from "./domain/inquiries";
+export type { InquiryAnswerDraft } from "./ai/inquiry-answer";
+export type { ProductPhotoReading } from "./ai/product-photo";
+export type { IdentifiedProduct } from "./domain/product-photo";

@@ -36,15 +36,45 @@ export const ROUNDING_UNITS = [1, 10, 100] as const;
 export type ProvisionalChannel = "phone" | "sms" | "line" | "mail";
 export const PROVISIONAL_CHANNEL_LABEL: Record<ProvisionalChannel, string> = { phone: "電話（口頭）", sms: "ショートメール", line: "LINE", mail: "メール（本文）" };
 
-export type InboxKind = "call_open" | "call_needs_human" | "quote_draft" | "provisional" | "delivery_waiting" | "followup";
+export type InboxKind = "call_open" | "call_needs_human" | "inquiry_open" | "quote_draft" | "provisional" | "delivery_waiting" | "followup";
 export const INBOX_KIND_LABEL: Record<InboxKind, string> = {
   call_open: "電話メモ未入力",
   call_needs_human: "担当確認待ち",
+  inquiry_open: "問い合わせ未回答",
   quote_draft: "見積り未提出",
   provisional: "正式未送付",
   delivery_waiting: "納期回答待ち",
   followup: "そろそろ確認",
 };
+
+// ---------- 問い合わせ回答 ----------
+export type InquiryKind = "spec" | "delivery" | "stock" | "equivalent" | "price" | "other";
+export const INQUIRY_KIND_LABEL: Record<InquiryKind, string> = { spec: "仕様・規格", delivery: "納期", stock: "在庫・入手可否", equivalent: "同等品・代替品", price: "価格", other: "その他" };
+export type InquiryChannel = "mail" | "phone" | "line" | "sms" | "visit" | "other";
+export const INQUIRY_CHANNEL_LABEL: Record<InquiryChannel, string> = { mail: "メール", phone: "電話", line: "LINE", sms: "ショートメール", visit: "訪問時", other: "その他" };
+export type InquiryStatus = "open" | "answered" | "closed";
+export interface Inquiry {
+  id: number;
+  user_id: number | null;
+  customer_id: number | null;
+  contact_id: number | null;
+  deal_id: number | null;
+  channel: InquiryChannel;
+  kind: InquiryKind;
+  question: string;
+  answer: string | null;
+  answer_channel: InquiryChannel | null;
+  status: InquiryStatus;
+  due: string | null;
+  source: string;
+  answered_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export interface InquiryWithRefs extends Inquiry { customer: Customer | null; contact: Contact | null }
+
+/** 共有メニュー（Android の share_target）から受け取った内容の一時保管。 */
+export interface ShareItem { id: number; token: string; title: string; text: string; url: string; file_name: string | null; file_mime: string | null; created_at: string }
 
 export interface Customer {
   id: number;
@@ -343,6 +373,10 @@ export interface User {
   proxy_send_allowed: number;
   /** カレンダーの非公開 iCal URL（Google カレンダー等）。訪問予定の取り込み元。 */
   calendar_ics_url: string | null;
+  /** Google カレンダー OAuth 連携（refresh token はこの端末の SQLite にのみ保存）。 */
+  google_refresh_token: string | null;
+  google_calendar_id: string | null;
+  google_email: string | null;
   created_at: string;
 }
 

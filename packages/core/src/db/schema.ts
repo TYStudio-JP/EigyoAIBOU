@@ -31,6 +31,9 @@ CREATE TABLE IF NOT EXISTS users (
   target_margin REAL,
   proxy_send_allowed INTEGER NOT NULL DEFAULT 0,
   calendar_ics_url TEXT,
+  google_refresh_token TEXT,
+  google_calendar_id TEXT,
+  google_email  TEXT,
   created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 
@@ -49,6 +52,37 @@ CREATE TABLE IF NOT EXISTS visits (
   updated_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_visits_external ON visits(user_id, source, external_id) WHERE external_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS inquiries (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id       INTEGER REFERENCES users(id),
+  customer_id   INTEGER REFERENCES customers(id),
+  contact_id    INTEGER REFERENCES contacts(id),
+  deal_id       INTEGER REFERENCES deals(id),
+  channel       TEXT NOT NULL DEFAULT 'mail',
+  kind          TEXT NOT NULL DEFAULT 'other',
+  question      TEXT NOT NULL,
+  answer        TEXT,
+  answer_channel TEXT,
+  status        TEXT NOT NULL CHECK (status IN ('open','answered','closed')) DEFAULT 'open',
+  due           TEXT,
+  source        TEXT NOT NULL DEFAULT 'manual',
+  answered_at   TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  updated_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS share_inbox (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  token         TEXT NOT NULL UNIQUE,
+  title         TEXT NOT NULL DEFAULT '',
+  text          TEXT NOT NULL DEFAULT '',
+  url           TEXT NOT NULL DEFAULT '',
+  file_name     TEXT,
+  file_mime     TEXT,
+  file_blob     BLOB,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
 
 CREATE TABLE IF NOT EXISTS crosssell_dismissals (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
