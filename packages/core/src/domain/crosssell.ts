@@ -1,6 +1,6 @@
 import type { Db } from "../db/connection";
-import { getCustomer, getProduct, listCustomers, purchasedProducts, currentSupplierPrices } from "./repo";
-import type { Customer, Product } from "./types";
+import { getCustomer, getProduct, listCustomers, purchasedProducts, currentSupplierPrices, listCrossSellDismissals } from "./repo";
+import type { CrossSellDismissal, Customer, Product } from "./types";
 
 export interface PeerEvidence {
   customer: Customer;
@@ -21,14 +21,18 @@ export interface CrossSellResult {
   customer: Customer;
   peers: { customer: Customer; similarity: number; shared_categories: string[] }[];
   candidates: CrossSellCandidate[];
+  /** 「提案済み」「不要」として一覧から消した候補（戻せる）。 */
+  dismissed: (CrossSellDismissal & { product: Product })[];
 }
 
-/** 同業（同じ業種）かつ購買カテゴリが似ている得意先で売れていて、対象得意先が未購入の商品を抽出する。 */
-export function crossSellCandidates(db: Db, customerId: number, limit = 8): CrossSellResult {
+/** 同業（同じ業種）かつ購買カテゴリが似ている得意先で売れていて、対象得意先が未購入の商品を抽出する。提案済み・不要にしたものは除く。 */
+export function crossSellCandidates(db: Db, customerId: number, limit = 8, opts: { includeDismissed?: boolean } = {}): CrossSellResult {
   const customer = getCustomer(db, customerId);
   if (!customer) throw new Error(`customer ${customerId} not found`);
+  const dismissedRows = listCrossSellDismissals(db, customerId);
+  const dismissedIds = new Set(opts.includeDismissed ? [] : dismissedRows.map((d) => d.product_id));
   const mine = purchasedProducts(db, customerId);
-  const myProducts = new Set(mine.map((m) => m.product_id));
+  const myProducts = new Set([...mine.map((m) => m.product_id), ...dismissedIds]);
   const myCats = new Set(mine.map((m) => m.category));
 
   const peers = listCustomers(db)
@@ -67,5 +71,6 @@ export function crossSellCandidates(db: Db, customerId: number, limit = 8): Cros
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
 
-  return { customer, peers: peers.map(({ customer, similarity, shared_categories }) => ({ customer, similarity, shared_categories })), candidates };
+  const dismissed = dismissedRows.map((d) => ({ ...d, product: getProduct(db, d.product_id)! })).filter((d) => d.product);
+  return { customer, peers: peers.map(({ customer, similarity, shared_categories }) => ({ customer, similarity, shared_categories })), candidates, dismissed };
 }

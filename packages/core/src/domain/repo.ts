@@ -89,15 +89,25 @@ export function findCustomerByTel(db: Db, tel: string): Customer | null {
   if (!n) return null;
   return listCustomers(db).find((c) => c.tel && normalizeTel(c.tel) === n) ?? null;
 }
-export function upsertCustomer(db: Db, c: Omit<Customer, "id" | "kind" | "owner_user_id"> & { kind?: CustomerKind; owner_user_id?: number | null }): Customer {
+type PricingFields = Pick<Customer, "pricing_mode" | "markup_rate" | "margin_pct" | "rounding_unit">;
+export function upsertCustomer(db: Db, c: Omit<Customer, "id" | "kind" | "owner_user_id" | keyof PricingFields> & { kind?: CustomerKind; owner_user_id?: number | null } & Partial<PricingFields>): Customer {
+  // 値付けルールは指定があるときだけ更新（マスタ取り込みで既存の設定を消さない）
+  const mode = c.pricing_mode ?? null, rate = c.markup_rate ?? null, mp = c.margin_pct ?? null, ru = c.rounding_unit ?? null;
   db.prepare(
-    `INSERT INTO customers(code,name,short_name,industry,prefecture,contact_name,contact_email,tel,kind,owner_user_id,payment_terms,notes)
-     VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+    `INSERT INTO customers(code,name,short_name,industry,prefecture,contact_name,contact_email,tel,kind,owner_user_id,payment_terms,notes,pricing_mode,markup_rate,margin_pct,rounding_unit)
+     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,COALESCE(?,'none'),?,?,COALESCE(?,1))
      ON CONFLICT(code) DO UPDATE SET name=excluded.name, short_name=excluded.short_name, industry=excluded.industry,
        prefecture=excluded.prefecture, contact_name=excluded.contact_name, contact_email=excluded.contact_email,
-       tel=excluded.tel, kind=excluded.kind, owner_user_id=COALESCE(excluded.owner_user_id, customers.owner_user_id), payment_terms=excluded.payment_terms, notes=excluded.notes`,
-  ).run(c.code, c.name, c.short_name, c.industry, c.prefecture, c.contact_name, c.contact_email, c.tel ?? null, c.kind ?? "end_user", c.owner_user_id ?? null, c.payment_terms, c.notes);
+       tel=excluded.tel, kind=excluded.kind, owner_user_id=COALESCE(excluded.owner_user_id, customers.owner_user_id), payment_terms=excluded.payment_terms, notes=excluded.notes,
+       pricing_mode=COALESCE(?, customers.pricing_mode), markup_rate=COALESCE(?, customers.markup_rate), margin_pct=COALESCE(?, customers.margin_pct), rounding_unit=COALESCE(?, customers.rounding_unit)`,
+  ).run(c.code, c.name, c.short_name, c.industry, c.prefecture, c.contact_name, c.contact_email, c.tel ?? null, c.kind ?? "end_user", c.owner_user_id ?? null, c.payment_terms, c.notes, mode, rate, mp, ru, mode, rate, mp, ru);
   return one<Customer>(db, "SELECT * FROM customers WHERE code=?", c.code)!;
+}
+/** 得意先の属性（値付けルール・メモなど）を部分更新する。 */
+export function updateCustomer(db: Db, id: number, patch: Partial<Pick<Customer, "notes" | "contact_name" | "contact_email" | "tel" | "kind" | "payment_terms" | "industry" | keyof PricingFields>>): Customer {
+  const keys = Object.keys(patch) as (keyof typeof patch)[];
+  if (keys.length) db.prepare(`UPDATE customers SET ${keys.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...keys.map((k) => patch[k] as string | number | null), id);
+  return getCustomer(db, id)!;
 }
 
 // ---------- suppliers ----------
@@ -107,13 +117,18 @@ export function listSuppliers(db: Db): Supplier[] {
 export function getSupplier(db: Db, id: number): Supplier | null {
   return one<Supplier>(db, "SELECT * FROM suppliers WHERE id=?", id);
 }
-export function upsertSupplier(db: Db, s: Omit<Supplier, "id">): Supplier {
+export function upsertSupplier(db: Db, s: Omit<Supplier, "id" | "markup_rate"> & { markup_rate?: number | null }): Supplier {
   db.prepare(
-    `INSERT INTO suppliers(code,name,route_type,lead_time_days,contact_email) VALUES(?,?,?,?,?)
+    `INSERT INTO suppliers(code,name,route_type,lead_time_days,contact_email,markup_rate) VALUES(?,?,?,?,?,?)
      ON CONFLICT(code) DO UPDATE SET name=excluded.name, route_type=excluded.route_type,
-       lead_time_days=excluded.lead_time_days, contact_email=excluded.contact_email`,
-  ).run(s.code, s.name, s.route_type, s.lead_time_days, s.contact_email);
+       lead_time_days=excluded.lead_time_days, contact_email=excluded.contact_email, markup_rate=COALESCE(?, suppliers.markup_rate)`,
+  ).run(s.code, s.name, s.route_type, s.lead_time_days, s.contact_email, s.markup_rate ?? null, s.markup_rate ?? null);
   return one<Supplier>(db, "SELECT * FROM suppliers WHERE code=?", s.code)!;
+}
+export function updateSupplier(db: Db, id: number, patch: Partial<Pick<Supplier, "name" | "lead_time_days" | "contact_email" | "markup_rate">>): Supplier {
+  const keys = Object.keys(patch) as (keyof typeof patch)[];
+  if (keys.length) db.prepare(`UPDATE suppliers SET ${keys.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...keys.map((k) => patch[k] as string | number | null), id);
+  return getSupplier(db, id)!;
 }
 
 // ---------- products ----------
@@ -621,14 +636,52 @@ export function listUsers(db: Db, opts: { includeInactive?: boolean } = {}): Use
 export function getUser(db: Db, id: number): User | null {
   return one<User>(db, "SELECT * FROM users WHERE id=?", id);
 }
-export function createUser(db: Db, u: { name: string; department?: string; email?: string | null; status?: "active" | "inactive" }): User {
-  const res = db.prepare("INSERT INTO users(name,department,email,status) VALUES(?,?,?,?)").run(u.name, u.department ?? "", u.email ?? null, u.status ?? "active");
+export function createUser(db: Db, u: { name: string; department?: string; email?: string | null; status?: "active" | "inactive"; target_sales?: number | null; target_margin?: number | null }): User {
+  const res = db.prepare("INSERT INTO users(name,department,email,status,target_sales,target_margin) VALUES(?,?,?,?,?,?)").run(u.name, u.department ?? "", u.email ?? null, u.status ?? "active", u.target_sales ?? null, u.target_margin ?? null);
   return getUser(db, Number(res.lastInsertRowid))!;
 }
-export function updateUser(db: Db, id: number, patch: Partial<Pick<User, "name" | "department" | "email" | "status">>): User {
+export function updateUser(db: Db, id: number, patch: Partial<Pick<User, "name" | "department" | "email" | "status" | "target_sales" | "target_margin" | "proxy_send_allowed">>): User {
   const keys = Object.keys(patch) as (keyof typeof patch)[];
-  if (keys.length) db.prepare(`UPDATE users SET ${keys.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...keys.map((k) => patch[k] as string | null), id);
+  if (keys.length) db.prepare(`UPDATE users SET ${keys.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...keys.map((k) => patch[k] as string | number | null), id);
   return getUser(db, id)!;
+}
+
+// ---------- 任意キーの設定値（CSV 取り込みの列対応など、Settings 型に無いもの） ----------
+export function getRawSetting(db: Db, key: string): string | null {
+  return one<{ value: string }>(db, "SELECT value FROM settings WHERE key=?", key)?.value ?? null;
+}
+export function setRawSetting(db: Db, key: string, value: string | null): void {
+  if (value === null) db.prepare("DELETE FROM settings WHERE key=?").run(key);
+  else db.prepare("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(key, value);
+}
+
+// ---------- 横展開の「提案済み・不要」 ----------
+import type { CrossSellDismissReason, CrossSellDismissal, DeliveryKind, MailLog } from "./types";
+export function dismissCrossSell(db: Db, customerId: number, productId: number, reason: CrossSellDismissReason, note = ""): CrossSellDismissal {
+  db.prepare("INSERT INTO crosssell_dismissals(customer_id,product_id,reason,note,created_at) VALUES(?,?,?,?,?) ON CONFLICT(customer_id,product_id) DO UPDATE SET reason=excluded.reason, note=excluded.note, created_at=excluded.created_at").run(customerId, productId, reason, note, nowStamp());
+  return one<CrossSellDismissal>(db, "SELECT * FROM crosssell_dismissals WHERE customer_id=? AND product_id=?", customerId, productId)!;
+}
+export function undismissCrossSell(db: Db, customerId: number, productId: number): void {
+  db.prepare("DELETE FROM crosssell_dismissals WHERE customer_id=? AND product_id=?").run(customerId, productId);
+}
+export function listCrossSellDismissals(db: Db, customerId: number): CrossSellDismissal[] {
+  return all<CrossSellDismissal>(db, "SELECT * FROM crosssell_dismissals WHERE customer_id=? ORDER BY created_at DESC", customerId);
+}
+
+// ---------- 概算／確定納期 ----------
+export function setDeliveryKind(db: Db, quoteId: number, kind: DeliveryKind): void {
+  db.prepare("UPDATE quotes SET delivery_kind=?, updated_at=? WHERE id=?").run(kind, nowStamp(), quoteId);
+}
+
+// ---------- メール送信履歴（自分宛て・代理送付） ----------
+export function addMailLog(db: Db, m: { quote_id: number | null; user_id: number | null; kind: "self" | "customer"; to_addr: string; cc_addr?: string | null; subject: string }): MailLog {
+  const res = db.prepare("INSERT INTO mail_log(quote_id,user_id,kind,to_addr,cc_addr,subject,created_at) VALUES(?,?,?,?,?,?,?)").run(m.quote_id, m.user_id, m.kind, m.to_addr, m.cc_addr ?? null, m.subject, nowStamp());
+  return one<MailLog>(db, "SELECT * FROM mail_log WHERE id=?", Number(res.lastInsertRowid))!;
+}
+export function listMailLog(db: Db, opts: { quoteId?: number; limit?: number } = {}): MailLog[] {
+  return opts.quoteId
+    ? all<MailLog>(db, "SELECT * FROM mail_log WHERE quote_id=? ORDER BY created_at DESC LIMIT ?", opts.quoteId, opts.limit ?? 50)
+    : all<MailLog>(db, "SELECT * FROM mail_log ORDER BY created_at DESC LIMIT ?", opts.limit ?? 50);
 }
 /** 得意先の担当ユーザーを設定（履歴なしの初期設定用。引継ぎは domain/handover.ts の handoverCustomer を使う）。 */
 export function setCustomerOwner(db: Db, customerId: number, userId: number | null): void {

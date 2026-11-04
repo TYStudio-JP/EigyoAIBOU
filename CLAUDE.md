@@ -13,7 +13,16 @@ Built with Claude: Japan 2026 ハッカソン（テーマ #1「あなたにし�
 7. **伝票計上指示**（`domain/keijo.ts`）、**営業日報**（`domain/report.ts` + `ai/report.ts`）、**納期回答待ち**（`domain/delivery.ts`）、**訪問前ブリーフ**（`domain/brief.ts` + `ai/brief.ts`）、**価格改定の影響**（`domain/price-impact.ts`）。いずれも事実は決定的に集め、AI は清書・要約だけ。
 8. **質問する（チャット）** — `ai/chat.ts` の tool runner。道具は Web/MCP と同じドメイン関数。履歴は `chats` にユーザーごと。
 9. **ウェブで調べる** — `ai/research.ts`（Claude のサーバー側 `web_search_20260209`）。チャットの道具にも入れている。社内記録とウェブ情報は区別して出す。
-10. 仕入れ先への納期・価格問い合わせメールの下書き、Excel 見積書出力。マスタの CSV 取り込みは README に設計のみ（未実装）。
+10. 仕入れ先への納期・価格問い合わせメールの下書き、Excel 見積書出力（自社書式テンプレート対応、13・14 参照）。
+11. **外出先モード（スマホ）** — 設計書は `docs/スマホ版（外出先モード）設計_2026-11-03.md`。
+   - **得意先に直接送らない。** 完成品は「自分宛てメール」（`domain/self-mail.ts`、SMTP は `.env` の `EIGYO_SMTP_*`）か共有メニューで本人に渡し、本人が転送する。
+   - **暫定回答→正式未送付**（`domain/provisional.ts`）。口頭・SMS で単価を伝えたら `markProvisional` で記録（下書きは提出済へ、明細スナップショット保存）。`formalDiff` で正式版との差を赤表示、`markFormalSent` で完了。`quotes.status` の CHECK は変えず列追加で表現している。
+   - **値付けルール**（`domain/pricing-rule.ts`、純粋関数で `@eigyo/core/shared` からも使える）。得意先の `pricing_mode`（markup／margin）＋ `rounding_unit`（1・10・100 円切り捨て）、仕入れ先の `markup_rate`。優先は得意先 → 仕入れ先。`proposePrice` は 前回単価 → ルール価格 → 他社平均 → 推奨粗利 → 定価 の順。
+   - **返事待ち**（`domain/inbox.ts` の `replyQueue`）：電話メモ未入力・担当確認待ち・正式未送付・見積り未提出・納期回答待ち・そろそろ確認を急ぎ順に一本化。ホームと `/inbox`。
+   - スマホの見積り画面は `components/quote-mobile.tsx`（ポイント確認＋下固定バー）、デスクトップは従来の `quote-detail.tsx`。
+12. **目標と実績**（`domain/targets.ts`）— ユーザーごとの月目標（`users.target_sales/target_margin`）に対する受注実績・あといくら・金額順に何件で届くか。ホームの「今月の目標」。
+13. **マスタ CSV 取り込み**（`domain/import.ts`）— 得意先・仕入れ先・商品・仕入れ価格・売上実績。UTF-8／Shift_JIS 自動判定、列名の同義語で自動対応、対応は `settings` に保存。**未対応の列は既存値を保つ**。売上実績は受注済み見積り（`source_type: import`）として入る。
+14. **横展開の済み**（`crosssell_dismissals`）、**概算／確定納期**（`quotes.delivery_kind`、受注後に全明細の回答が揃うと自動で確定）、**代理送付**（`users.proxy_send_allowed`。`proxySendPreconditions` で許可・SMTP・宛先を検証し、画面の明示的な確認が無ければ送らない。`mail_log` に履歴）、**自社書式テンプレート**（`data/templates/quote_template.xlsx`、`{{キー}}` 差し込み、`{{item.*}}` 行を複製。`sampleQuoteTemplate` が土台）、**印刷・PDF** は `/quotes/[id]/print`。
 
 **スマホが主役。** 画面は下タブ＋大きなボタンのスマホ優先レイアウト（`lg:` 以上でサイドバー）。マスタ登録・設定はデスクトップのみ。外出先からは `npm run tunnel`（Cloudflare）＋ `EIGYO_ACCESS_KEY`（`apps/web/src/proxy.ts`）。
 

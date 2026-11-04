@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS customers (
   owner_user_id INTEGER REFERENCES users(id),
   payment_terms TEXT NOT NULL DEFAULT '月末締め翌月末払い',
   notes         TEXT NOT NULL DEFAULT '',
+  pricing_mode  TEXT NOT NULL DEFAULT 'none',
+  markup_rate   REAL,
+  margin_pct    REAL,
+  rounding_unit INTEGER NOT NULL DEFAULT 1,
   created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 
@@ -23,6 +27,30 @@ CREATE TABLE IF NOT EXISTS users (
   department    TEXT NOT NULL DEFAULT '',
   email         TEXT,
   status        TEXT NOT NULL CHECK (status IN ('active','inactive')) DEFAULT 'active',
+  target_sales  REAL,
+  target_margin REAL,
+  proxy_send_allowed INTEGER NOT NULL DEFAULT 0,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS crosssell_dismissals (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id   INTEGER NOT NULL REFERENCES customers(id),
+  product_id    INTEGER NOT NULL REFERENCES products(id),
+  reason        TEXT NOT NULL CHECK (reason IN ('proposed','not_needed')) DEFAULT 'proposed',
+  note          TEXT NOT NULL DEFAULT '',
+  created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  UNIQUE (customer_id, product_id)
+);
+
+CREATE TABLE IF NOT EXISTS mail_log (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  quote_id      INTEGER REFERENCES quotes(id) ON DELETE SET NULL,
+  user_id       INTEGER REFERENCES users(id),
+  kind          TEXT NOT NULL CHECK (kind IN ('self','customer')),
+  to_addr       TEXT NOT NULL,
+  cc_addr       TEXT,
+  subject       TEXT NOT NULL,
   created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 
@@ -95,7 +123,8 @@ CREATE TABLE IF NOT EXISTS suppliers (
   name          TEXT NOT NULL,
   route_type    TEXT NOT NULL CHECK (route_type IN ('maker','agency','trading')),
   lead_time_days INTEGER NOT NULL DEFAULT 5,
-  contact_email TEXT
+  contact_email TEXT,
+  markup_rate   REAL
 );
 
 CREATE TABLE IF NOT EXISTS products (
@@ -139,6 +168,12 @@ CREATE TABLE IF NOT EXISTS quotes (
   lost_detail   TEXT,
   submitted_at  TEXT,
   closed_at     TEXT,
+  provisional_at TEXT,
+  provisional_channel TEXT,
+  provisional_text TEXT,
+  provisional_items_json TEXT,
+  formal_sent_at TEXT,
+  delivery_kind TEXT NOT NULL DEFAULT 'estimate',
   created_at    TEXT NOT NULL DEFAULT (datetime('now','localtime')),
   updated_at    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );

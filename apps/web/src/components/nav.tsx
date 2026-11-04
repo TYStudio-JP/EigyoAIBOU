@@ -33,7 +33,7 @@ function isActive(path: string, href: string) {
 
 export function Nav() {
   const path = usePathname();
-  if (path === "/unlock") return null;
+  if (path === "/unlock" || path.endsWith("/print")) return null;
   return (
     <>
       {/* デスクトップ：サイドバー */}

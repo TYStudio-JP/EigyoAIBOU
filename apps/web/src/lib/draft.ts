@@ -34,6 +34,8 @@ export interface ProposalSummary {
   last_same_customer: PriceProposal["last_same_customer"];
   other_customers: { min: number; max: number; avg: number; count: number } | null;
   history: PriceProposal["history"];
+  rule: PriceProposal["rule"];
+  rule_price: number | null;
 }
 export interface QuoteDraft {
   customer_id: number | null;
@@ -55,7 +57,7 @@ function summarize(p: PriceProposal): ProposalSummary {
     proposed_price: p.proposed_price, proposal_basis: p.proposal_basis, floor_price: p.floor_price, target_price: p.target_price,
     best_cost: p.best_cost, best_supplier_name: p.best_supplier_name, last_same_customer: p.last_same_customer,
     other_customers: p.other_customers ? { min: p.other_customers.min, max: p.other_customers.max, avg: p.other_customers.avg, count: p.other_customers.count } : null,
-    history: p.history.slice(0, 8),
+    history: p.history.slice(0, 8), rule: p.rule, rule_price: p.rule_price,
   };
 }
 

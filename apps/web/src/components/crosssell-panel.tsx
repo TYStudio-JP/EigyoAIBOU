@@ -6,10 +6,25 @@ import { Button, Card, Empty } from "./ui";
 import { CopyButton } from "./modal";
 import { dateJp, yen } from "@/lib/format";
 
-export function CrossSellPanel({ result, aiEnabled }: { result: CrossSellResult; aiEnabled: boolean }) {
+export function CrossSellPanel({ result: initial, aiEnabled }: { result: CrossSellResult; aiEnabled: boolean }) {
+  const [result, setResult] = useState(initial);
   const [draft, setDraft] = useState<ProposalDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [showDismissed, setShowDismissed] = useState(false);
+  /** 候補を「提案済み」「不要」にして一覧から消す（戻せる）。 */
+  const dismiss = async (productId: number, reason: "proposed" | "not_needed") => {
+    setErr(null);
+    const r = await fetch(`/api/customers/${result.customer.id}/crosssell/dismiss`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ product_id: productId, reason }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { setErr(j.error ?? "失敗しました"); return; }
+    setResult(j);
+  };
+  const restore = async (productId: number) => {
+    const r = await fetch(`/api/customers/${result.customer.id}/crosssell/dismiss`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ product_id: productId }) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) setResult(j);
+  };
   const run = async () => {
     setBusy(true); setErr(null);
     try {
@@ -26,7 +41,7 @@ export function CrossSellPanel({ result, aiEnabled }: { result: CrossSellResult;
       }>
         {result.candidates.length === 0 ? <Empty>候補なし</Empty> : (
           <div className="overflow-x-auto"><table className="w-full text-sm min-w-[40rem]">
-            <thead className="text-xs text-muted"><tr><th className="text-left font-normal py-1">商品</th><th className="text-left font-normal">根拠（同業の実績）</th><th className="text-right font-normal">参考売価</th><th className="text-right font-normal">最安原価</th><th className="text-right font-normal">スコア</th></tr></thead>
+            <thead className="text-xs text-muted"><tr><th className="text-left font-normal py-1">商品</th><th className="text-left font-normal">根拠（同業の実績）</th><th className="text-right font-normal">参考売価</th><th className="text-right font-normal">最安原価</th><th className="text-right font-normal">スコア</th><th className="w-36" /></tr></thead>
             <tbody>
               {result.candidates.map((c) => (
                 <tr key={c.product.id} className="border-t border-line align-top">
@@ -38,12 +53,23 @@ export function CrossSellPanel({ result, aiEnabled }: { result: CrossSellResult;
                   <td className="py-2 text-right num">{yen(c.reference_price)}</td>
                   <td className="py-2 text-right num text-muted">{yen(c.best_cost)}</td>
                   <td className="py-2 text-right num text-muted">{c.score.toFixed(1)}</td>
+                  <td className="py-2 pl-3 text-right whitespace-nowrap"><Button size="sm" onClick={() => dismiss(c.product.id, "proposed")} title="提案したので一覧から消す">提案した</Button> <Button size="sm" variant="ghost" onClick={() => dismiss(c.product.id, "not_needed")} title="この得意先には不要">不要</Button></td>
                 </tr>
               ))}
             </tbody>
           </table></div>
         )}
         {err && <p className="text-sm text-danger mt-2">{err}</p>}
+        {result.dismissed.length > 0 && (
+          <div className="mt-3 text-xs">
+            <button type="button" className="text-brand hover:underline" onClick={() => setShowDismissed(!showDismissed)}>{showDismissed ? "済みを閉じる" : `済み・不要（${result.dismissed.length}）を見る`}</button>
+            {showDismissed && (
+              <ul className="mt-1 divide-y divide-line">
+                {result.dismissed.map((d) => <li key={d.id} className="py-1 flex items-center gap-2"><span className={`rounded px-1.5 py-0.5 ${d.reason === "proposed" ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600"}`}>{d.reason === "proposed" ? "提案済み" : "不要"}</span><span className="flex-1">{d.product.name} <span className="text-muted num">{dateJp(d.created_at)}{d.note ? `・${d.note}` : ""}</span></span><button type="button" className="text-brand hover:underline" onClick={() => restore(d.product_id)}>戻す</button></li>)}
+              </ul>
+            )}
+          </div>
+        )}
         <p className="text-xs text-muted mt-3">比較した同業: {result.peers.map((p) => `${p.customer.short_name}（類似度 ${(p.similarity * 100).toFixed(0)}%）`).join("、") || "なし"}</p>
       </Card>
       {draft && (

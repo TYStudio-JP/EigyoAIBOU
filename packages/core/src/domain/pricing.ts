@@ -1,6 +1,7 @@
 import type { Db } from "../db/connection";
 import { ROUTE_LABEL, type Product, type Settings, type SupplierPrice } from "./types";
-import { currentSupplierPrices, getProduct, getSettings, priceHistory, type PriceHistoryRow } from "./repo";
+import { currentSupplierPrices, getCustomer, getProduct, getSettings, getSupplier, priceHistory, type PriceHistoryRow } from "./repo";
+import { resolvePricingRule, rulePrice, type PricingRule } from "./pricing-rule";
 
 export type CheckLevel = "ok" | "info" | "warn" | "danger";
 export interface PriceCheck {
@@ -13,7 +14,8 @@ export interface PriceCheck {
     | "above_other_customers" // 他社への売価より高い
     | "cheaper_route"         // もっと安い仕入れルートがある
     | "no_history"            // 履歴なし（新規品）
-    | "min_lot";              // 最小ロット未満
+    | "min_lot"               // 最小ロット未満
+    | "off_rule";             // 得意先の値付けルール（掛率／粗利）と違う
   level: CheckLevel;
   title: string;
   detail: string;
@@ -38,6 +40,9 @@ export interface PriceProposal {
   last_same_customer: PriceHistoryRow | null;
   other_customers: { min: number; max: number; avg: number; count: number; rows: PriceHistoryRow[] } | null;
   history: PriceHistoryRow[];
+  /** 得意先（または仕入れ先）の値付けルールと、最安仕入れにそれを当てた売価（「いつもの掛率なら」）。 */
+  rule: PricingRule | null;
+  rule_price: number | null;
 }
 
 export const round = (n: number, digits = 0): number => {
@@ -69,12 +74,18 @@ export function proposePrice(db: Db, productId: number, customerId: number, qty:
 
   const floor = best ? round(best.cost / (1 - settings.margin_floor_pct / 100)) : null;
   const target = best ? round(best.cost / (1 - settings.margin_target_pct / 100)) : null;
+  const rule = resolvePricingRule(getCustomer(db, customerId), best ? getSupplier(db, best.supplier_id) : null);
+  const rulePx = rule && best ? rulePrice(best.cost, rule) : null;
 
   let proposed: number;
   let basis: string;
   if (lastSame) {
     proposed = lastSame.unit_price;
     basis = `${lastSame.date.slice(0, 10)} の同得意先向け${lastSame.status === "won" ? "受注" : "提出"}単価（${lastSame.quote_no}）を踏襲`;
+    if (rulePx && Math.abs(rulePx - proposed) / proposed > 0.01) basis += `（いつもの${rule!.mode === "markup" ? "掛率" : "粗利"}なら ${rulePx.toLocaleString()} 円）`;
+  } else if (rulePx) {
+    proposed = rulePx;
+    basis = `同得意先の履歴なし。最安仕入れ（${best!.supplier_name} ${best!.cost.toLocaleString()} 円）に ${rule!.label} を当てた価格`;
   } else if (others) {
     proposed = others.avg;
     basis = `同得意先の履歴なし。他社向け平均単価（${others.count}件）を採用`;
@@ -105,6 +116,8 @@ export function proposePrice(db: Db, productId: number, customerId: number, qty:
     last_same_customer: lastSame,
     other_customers: others,
     history,
+    rule,
+    rule_price: rulePx,
   };
 }
 
@@ -159,6 +172,13 @@ export function checkPrice(
   const chosenOpt = proposal.supplier_options.find((s) => s.supplier_id === supplierId);
   if (chosenOpt && proposal.qty < chosenOpt.min_lot) {
     checks.push({ code: "min_lot", level: "warn", title: "最小ロット未満", detail: `${chosenOpt.supplier_name} の最小ロットは ${chosenOpt.min_lot}${proposal.product.unit}。数量 ${proposal.qty} では仕入れできない可能性があります。` });
+  }
+  // 得意先の値付けルールと違う（前回単価を踏襲している場合は合意済みなので省く）
+  if (proposal.rule && cost > 0 && !keepsLastPrice) {
+    const rp = rulePrice(cost, proposal.rule);
+    if (rp > 0 && Math.abs(unitPrice - rp) / rp > 0.01) {
+      checks.push({ code: "off_rule", level: "info", title: "いつもの掛率・粗利と違う", detail: `${proposal.rule.label}なら ${yen(rp)}。今の単価は ${unitPrice > rp ? "高め" : "安め"}（${yen(Math.abs(unitPrice - rp))} 差）。意図した価格か確認してください。` });
+    }
   }
   return checks;
 }

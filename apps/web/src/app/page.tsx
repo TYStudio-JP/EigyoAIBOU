@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { dashboardStats, dealsToMove, followupQueue, listCalls, listQuotes, lostReasonStats, hasApiKey, LOST_REASON_LABEL, type LostReason } from "@eigyo/core";
+import { dashboardStats, dealsToMove, followupQueue, listCalls, listQuotes, lostReasonStats, hasApiKey, replyQueue, targetProgress, LOST_REASON_LABEL, type LostReason } from "@eigyo/core";
+import { InboxList } from "@/components/inbox-list";
+import { TargetCard } from "@/components/target-card";
 import { currentUser } from "@/lib/user";
 import { DealStatusBadge } from "@/components/deal-badge";
 import { db } from "@/lib/db";
@@ -19,6 +21,8 @@ export default async function Dashboard() {
   const recent = listQuotes(d, { limit: 8 });
   const lost = lostReasonStats(d);
   const ai = hasApiKey();
+  const inbox = replyQueue(d, { userId: me?.id ?? null, limit: 8 });
+  const target = targetProgress(d, { userId: me?.id ?? null });
   const calls = listCalls(d, { limit: 50 }).filter((c) => c.status === "open" || (c.status === "processed" && c.minutes?.requests.some((r) => r.result?.status === "needs_human")));
   return (
     <>
@@ -26,9 +30,13 @@ export default async function Dashboard() {
       {!ai && (
         <div className="mb-4 rounded-md border border-line bg-surface px-4 py-2 text-xs text-muted flex items-center justify-between"><span>AI 機能は未接続です</span><Link href="/settings" className="text-brand hover:underline">設定で接続</Link></div>
       )}
+      <Card className="mb-4" title={`返事待ち（${inbox.length}${inbox.length >= 8 ? "+" : ""}）`} action={<Link href="/inbox" className="text-xs text-brand hover:underline">すべて見る →</Link>}>
+        <InboxList items={inbox} />
+      </Card>
       <div className="lg:hidden grid grid-cols-4 gap-2 mb-4 text-center text-xs">
         {[["/chat", "💬", "質問"], ["/quotes/new", "✎", "見積り"], ["/report", "✉", "日報"], ["/delivery", "⏱", "納期"]].map(([h, i, l]) => <Link key={h} href={h} className="rounded-lg bg-surface border border-line py-2.5"><div className="text-xl">{i}</div>{l}</Link>)}
       </div>
+      <div className="mb-4"><TargetCard p={target} /></div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <Stat label="要フォロー（提出済・追跡中）" value={stats.by_status.submitted + stats.by_status.tracking} sub={`提出済 ${stats.by_status.submitted} / 追跡中 ${stats.by_status.tracking}`} tone="warn" />
         <Stat label="未決着の見積り金額" value={yen(stats.open_amount)} sub="税抜合計" />

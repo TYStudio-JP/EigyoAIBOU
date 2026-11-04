@@ -83,10 +83,11 @@ export function QuoteDetail({ quote, activities, lines, aiEnabled, deal, dealOpt
               </select>
             )}
           </div>
-          <div className="text-xs text-muted mt-1">作成 {dateJp(quote.created_at)} ／ 提出 {dateJp(quote.submitted_at)} ／ 有効期限 {dateJp(quote.valid_until)} ／ 希望納期 <b className="text-ink">{dateJp(quote.requested_delivery)}</b> ／ 回答納期 <b className="text-ink">{dateJp(quote.promised_delivery)}</b></div>
+          <div className="text-xs text-muted mt-1">作成 {dateJp(quote.created_at)} ／ 提出 {dateJp(quote.submitted_at)} ／ 有効期限 {dateJp(quote.valid_until)} ／ 希望納期 <b className="text-ink">{dateJp(quote.requested_delivery)}</b> ／ 回答納期 <b className="text-ink">{dateJp(quote.promised_delivery)}</b>{quote.promised_delivery && <span className={`ml-1 rounded px-1 ${quote.delivery_kind === "confirmed" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-800"}`}>{quote.delivery_kind === "confirmed" ? "確定" : "概算"}</span>}</div>
         </div>
         <div className="no-print flex flex-wrap gap-2">
           <a href={`/api/quotes/${quote.id}/excel`} className="inline-flex items-center rounded-md border border-line bg-surface px-3.5 py-2 text-sm font-medium hover:bg-bg">Excel 見積書</a>
+          <Link href={`/quotes/${quote.id}/print`} className="inline-flex items-center rounded-md border border-line bg-surface px-3.5 py-2 text-sm font-medium hover:bg-bg">印刷・PDF</Link>
           {quote.status === "won" && <a href={`/api/quotes/${quote.id}/keijo`} className="inline-flex items-center rounded-md border border-line bg-surface px-3.5 py-2 text-sm font-medium hover:bg-bg">計上指示 Excel</a>}
           <Button onClick={() => window.print()}>印刷</Button>
           {FLOW[quote.status].map((f) => (

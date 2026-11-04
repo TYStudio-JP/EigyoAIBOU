@@ -1,0 +1,21 @@
+// 外出先モードの MCP ツール（reply_queue / mark_provisional / mark_formal_sent）のスモークテスト。npm run mcp:smoke:mobile
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+const cwd = process.cwd();
+const t = new StdioClientTransport({ command: "node", args: ["--import", "tsx", "packages/mcp-server/src/index.ts"], cwd, env: { ...process.env, EIGYO_DB_PATH: "./data/mcp-test.db", NODE_NO_WARNINGS: "1" } });
+const c = new Client({ name: "t", version: "0" });
+await c.connect(t);
+const names = (await c.listTools()).tools.map((x) => x.name);
+console.log("tools:", names.length, names.filter((n) => ["reply_queue", "mark_provisional", "mark_formal_sent"].includes(n)).join(", "));
+const q = await c.callTool({ name: "create_quote", arguments: { customer: "C006", subject: "MCP暫定テスト", items: [{ product: "HG-12", qty: 20 }] } });
+const quoteNo = JSON.parse(q.content[0].text).quote_no;
+console.log("created:", quoteNo);
+const p = await c.callTool({ name: "mark_provisional", arguments: { quote_no: quoteNo, channel: "sms" } });
+const pj = JSON.parse(p.content[0].text); console.log("provisional:", pj.status, pj.channel, "| text head:", pj.text.split("\n")[2]);
+const r = await c.callTool({ name: "reply_queue", arguments: { limit: 30 } });
+const items = JSON.parse(r.content[0].text); console.log("reply_queue:", items.length, "items; provisional:", items.filter((i) => i.kind === "provisional").map((i) => i.customer).join(","));
+const f = await c.callTool({ name: "mark_formal_sent", arguments: { quote_no: quoteNo, check_only: true } });
+console.log("formal check:", f.content[0].text.slice(0, 120).replace(/\n/g, " "));
+const f2 = await c.callTool({ name: "mark_formal_sent", arguments: { quote_no: quoteNo } });
+console.log("formal sent:", JSON.parse(f2.content[0].text).formal_sent_at);
+await c.close();

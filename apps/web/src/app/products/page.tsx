@@ -1,4 +1,5 @@
-import { currentSupplierPrices, hasApiKey, listProducts, ROUTE_LABEL } from "@eigyo/core";
+import { currentSupplierPrices, hasApiKey, listProducts, listSuppliers, ROUTE_LABEL } from "@eigyo/core";
+import { SupplierRules } from "@/components/supplier-rules";
 import { WebResearch } from "@/components/web-research";
 import { ProductResearchButton } from "@/components/product-research-button";
 import { db } from "@/lib/db";
@@ -17,6 +18,7 @@ export default function ProductsPage() {
       <div className="lg:hidden mb-3 rounded-md border border-line bg-surface px-3 py-2 text-xs text-muted">登録・変更はパソコンから行えます。</div>
       <PageTitle title="商品・仕入れ先" />
       <Card className="mb-4" title="ウェブで調べる"><WebResearch aiEnabled={hasApiKey()} compact /></Card>
+      <Card className="mb-4 hidden lg:block" title="仕入れ先の標準掛率"><SupplierRules suppliers={listSuppliers(d)} /></Card>
       <div className="space-y-4">
         {[...byCat.entries()].map(([cat, ps]) => (
           <Card key={cat} title={cat}>

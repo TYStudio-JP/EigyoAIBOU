@@ -7,6 +7,7 @@ import { HandoverPanel } from "@/components/handover-panel";
 import { db } from "@/lib/db";
 import { Card, PageTitle, StatusBadge } from "@/components/ui";
 import { CrossSellPanel } from "@/components/crosssell-panel";
+import { PricingRuleForm } from "@/components/pricing-rule-form";
 import { dateJp, yen } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
       <PageTitle title={c.name} sub={`${c.code}・${CUSTOMER_KIND_LABEL[c.kind]}・${c.industry}・${c.prefecture}・${c.payment_terms}・TEL ${c.tel ?? "-"}`} action={<Link href={`/customers/${c.id}/brief`} className="inline-flex items-center rounded-md bg-brand text-brand-ink px-3.5 py-2 text-sm font-medium">訪問前ブリーフ</Link>} />
       <div className="grid lg:grid-cols-3 gap-4 mb-4">
         <Card title="得意先メモ" className="lg:col-span-1"><p className="text-sm">{c.notes || "—"}</p></Card>
+        <Card title="値付けルール（外出先でメーカー回答から即答するときの基準）" className="lg:col-span-3 hidden lg:block"><PricingRuleForm customer={{ id: c.id, pricing_mode: c.pricing_mode, markup_rate: c.markup_rate, margin_pct: c.margin_pct, rounding_unit: c.rounding_unit }} /></Card>
         <div className="lg:col-span-2"><HandoverPanel customerId={c.id} owner={c.owner_user_id ? getUser(d, c.owner_user_id) : null} users={listUsers(d, { includeInactive: true })} history={ownerHistory(d, c.id)} aiEnabled={hasApiKey()} meId={me?.id ?? null} /></div>
         <Card title={`担当者（${workload.length}）と対応量（直近90日）`} className="lg:col-span-3" action={<Link href={`/contacts/new?customer=${c.id}`} className="text-xs text-brand hover:underline">＋ 追加（名刺OK）</Link>}>
           {workload.length === 0 ? <p className="text-sm text-muted">担当者が未登録です。名刺を撮って追加してください。</p> : (
