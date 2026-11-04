@@ -12,3 +12,4 @@ data/*.db-shm
 Thumbs.db
 apps/web/AGENTS.md
 data/templates/
+video/
