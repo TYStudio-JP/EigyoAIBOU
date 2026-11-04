@@ -1,19 +1,19 @@
 /** 架空の得意先・仕入れ先・商品マスタ（実在の企業・製品とは無関係）。 */
 import type { RouteType } from "../domain/types";
 
-export interface SeedCustomer { code: string; name: string; short_name: string; industry: string; prefecture: string; contact_name: string; contact_email: string; tel: string; payment_terms: string; notes: string; discount: number; kind?: "end_user" | "dealer"; }
+export interface SeedCustomer { code: string; name: string; short_name: string; industry: string; prefecture: string; contact_name: string; contact_email: string; tel: string; payment_terms: string; notes: string; discount: number; kind?: "end_user" | "dealer"; pricing_mode?: "none" | "markup" | "margin"; markup_rate?: number; margin_pct?: number; rounding_unit?: number; }
 export interface SeedContact { customer: string; name: string; department: string; title: string; tel?: string; mobile?: string; email?: string; status?: "active" | "transferred" | "retired"; notes?: string; }
 export interface SeedEndCustomer { customer: string; name: string; industry: string; contact: string; notes?: string; }
-export interface SeedSupplier { code: string; name: string; route_type: RouteType; lead_time_days: number; contact_email: string; }
+export interface SeedSupplier { code: string; name: string; route_type: RouteType; lead_time_days: number; contact_email: string; markup_rate?: number; }
 export interface SeedProduct { code: string; part_number: string; name: string; maker: string; category: string; unit: string; list_price: number; spec: string; routes: { supplier: string; ratio: number; min_lot: number; lead?: number }[]; revised?: { from: string; ratio: number }; }
 
 export const CUSTOMERS: SeedCustomer[] = [
-  { code: "C001", name: "東海精密工業株式会社", short_name: "東海精密", industry: "自動車部品", prefecture: "愛知県", contact_name: "佐藤 健一", contact_email: "sato@tokai-seimitsu.example.jp", tel: "052-000-0101", payment_terms: "月末締め翌月末払い", notes: "量産ラインの消耗品を月次で発注。価格にシビアだが納期遵守を最重視。", discount: 0.78 },
+  { code: "C001", name: "東海精密工業株式会社", short_name: "東海精密", industry: "自動車部品", prefecture: "愛知県", contact_name: "佐藤 健一", contact_email: "sato@tokai-seimitsu.example.jp", tel: "052-000-0101", payment_terms: "月末締め翌月末払い", notes: "量産ラインの消耗品を月次で発注。価格にシビアだが納期遵守を最重視。", discount: 0.78, pricing_mode: "margin", margin_pct: 22, rounding_unit: 10 },
   { code: "C002", name: "北関東ベアリング株式会社", short_name: "北関東ベアリング", industry: "自動車部品", prefecture: "群馬県", contact_name: "鈴木 美咲", contact_email: "suzuki@kitakanto-brg.example.jp", tel: "027-000-0102", payment_terms: "20日締め翌月20日払い", notes: "購買部経由。相見積り必須。", discount: 0.82 },
-  { code: "C003", name: "みどり食品株式会社", short_name: "みどり食品", industry: "食品製造", prefecture: "埼玉県", contact_name: "高橋 誠", contact_email: "takahashi@midori-foods.example.jp", tel: "048-000-0103", payment_terms: "月末締め翌月末払い", notes: "HACCP対応の衛生資材を重視。工場長が決裁。", discount: 0.85 },
+  { code: "C003", name: "みどり食品株式会社", short_name: "みどり食品", industry: "食品製造", prefecture: "埼玉県", contact_name: "高橋 誠", contact_email: "takahashi@midori-foods.example.jp", tel: "048-000-0103", payment_terms: "月末締め翌月末払い", notes: "HACCP対応の衛生資材を重視。工場長が決裁。", discount: 0.85, pricing_mode: "markup", markup_rate: 1.35, rounding_unit: 100 },
   { code: "C004", name: "さくら製菓株式会社", short_name: "さくら製菓", industry: "食品製造", prefecture: "千葉県", contact_name: "田中 由美", contact_email: "tanaka@sakura-seika.example.jp", tel: "043-000-0104", payment_terms: "月末締め翌々月10日払い", notes: "年末繁忙期前（10〜11月）に梱包資材をまとめ買い。", discount: 0.88 },
   { code: "C005", name: "大江戸パン株式会社", short_name: "大江戸パン", industry: "食品製造", prefecture: "東京都", contact_name: "伊藤 翔", contact_email: "ito@oedo-pan.example.jp", tel: "03-0000-0105", payment_terms: "月末締め翌月末払い", notes: "新規取引1年目。まだ取扱品目が少ない。", discount: 0.9 },
-  { code: "C006", name: "湘南建設株式会社", short_name: "湘南建設", industry: "建設", prefecture: "神奈川県", contact_name: "渡辺 大輔", contact_email: "watanabe@shonan-kensetsu.example.jp", tel: "0466-00-0106", payment_terms: "月末締め翌月末払い", notes: "現場ごとに納品先が変わる。安全保護具の更新時期は4月。", discount: 0.8 },
+  { code: "C006", name: "湘南建設株式会社", short_name: "湘南建設", industry: "建設", prefecture: "神奈川県", contact_name: "渡辺 大輔", contact_email: "watanabe@shonan-kensetsu.example.jp", tel: "0466-00-0106", payment_terms: "月末締め翌月末払い", notes: "現場ごとに納品先が変わる。安全保護具の更新時期は4月。", discount: 0.8, pricing_mode: "markup", markup_rate: 1.3, rounding_unit: 10 },
   { code: "C007", name: "関東土木株式会社", short_name: "関東土木", industry: "建設", prefecture: "茨城県", contact_name: "山本 浩二", contact_email: "yamamoto@kanto-doboku.example.jp", tel: "029-000-0107", payment_terms: "月末締め翌月末払い", notes: "電話注文が多い。FAXで見積り依頼が届くことも。", discount: 0.84 },
   { code: "C008", name: "日之出物流株式会社", short_name: "日之出物流", industry: "物流", prefecture: "埼玉県", contact_name: "中村 彩", contact_email: "nakamura@hinode-logi.example.jp", tel: "048-000-0108", payment_terms: "月末締め翌月末払い", notes: "梱包資材の大口。ストレッチフィルムは毎月パレット単位。", discount: 0.76 },
   { code: "C009", name: "富士ロジスティクス株式会社", short_name: "富士ロジ", industry: "物流", prefecture: "静岡県", contact_name: "小林 遼", contact_email: "kobayashi@fuji-logi.example.jp", tel: "054-000-0109", payment_terms: "月末締め翌月末払い", notes: "倉庫新設に伴い備品需要あり。", discount: 0.83 },
@@ -65,7 +65,7 @@ export const END_CUSTOMERS: SeedEndCustomer[] = [
 export const SUPPLIERS: SeedSupplier[] = [
   { code: "S01", name: "ホクト安全保護具株式会社", route_type: "maker", lead_time_days: 7, contact_email: "order@hokuto-safety.example.jp" },
   { code: "S02", name: "サンエイ梱包資材株式会社", route_type: "maker", lead_time_days: 5, contact_email: "eigyo@sanei-pack.example.jp" },
-  { code: "S03", name: "東和切削工具株式会社", route_type: "maker", lead_time_days: 10, contact_email: "sales@towa-cut.example.jp" },
+  { code: "S03", name: "東和切削工具株式会社", route_type: "maker", lead_time_days: 10, contact_email: "sales@towa-cut.example.jp", markup_rate: 1.25 },
   { code: "S04", name: "日新ケミカル株式会社", route_type: "maker", lead_time_days: 7, contact_email: "order@nisshin-chem.example.jp" },
   { code: "S05", name: "中央産業機材株式会社", route_type: "agency", lead_time_days: 3, contact_email: "uketsuke@chuo-sangyo.example.jp" },
   { code: "S06", name: "関東工具商会", route_type: "agency", lead_time_days: 2, contact_email: "info@kanto-kogu.example.jp" },

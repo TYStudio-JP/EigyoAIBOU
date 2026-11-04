@@ -17,6 +17,7 @@
     "seed": "cross-env NODE_NO_WARNINGS=1 tsx packages/core/src/seed/cli.ts",
     "mcp": "cross-env NODE_NO_WARNINGS=1 node --import tsx packages/mcp-server/src/index.ts",
     "mcp:smoke": "cross-env NODE_NO_WARNINGS=1 node packages/mcp-server/scripts/smoke.mjs",
+    "mcp:smoke:mobile": "cross-env NODE_NO_WARNINGS=1 node packages/mcp-server/scripts/smoke-mobile.mjs",
     "test": "cross-env NODE_NO_WARNINGS=1 node --import tsx --test packages/core/src/__tests__/*.test.ts",
     "typecheck": "tsc -p packages/core && tsc -p packages/mcp-server && tsc -p apps/web --noEmit",
     "lint": "npm run lint -w apps/web",

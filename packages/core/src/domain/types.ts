@@ -27,6 +27,25 @@ export const LOST_REASON_LABEL: Record<LostReason, string> = {
 export type CustomerKind = "end_user" | "dealer";
 export const CUSTOMER_KIND_LABEL: Record<CustomerKind, string> = { end_user: "エンドユーザー", dealer: "ディーラー（商社・販売店）" };
 
+/** 値付けルール：none=履歴から（既定）／markup=仕入れ×掛率／margin=粗利率で逆算。端数は rounding_unit（1・10・100 円）で切り捨て。 */
+export type PricingMode = "none" | "markup" | "margin";
+export const PRICING_MODE_LABEL: Record<PricingMode, string> = { none: "履歴から（既定）", markup: "掛率（仕入れ × 係数）", margin: "粗利率（%）で逆算" };
+export const ROUNDING_UNITS = [1, 10, 100] as const;
+
+/** 暫定回答の手段（正式見積書の前に単価を伝えた方法）。 */
+export type ProvisionalChannel = "phone" | "sms" | "line" | "mail";
+export const PROVISIONAL_CHANNEL_LABEL: Record<ProvisionalChannel, string> = { phone: "電話（口頭）", sms: "ショートメール", line: "LINE", mail: "メール（本文）" };
+
+export type InboxKind = "call_open" | "call_needs_human" | "quote_draft" | "provisional" | "delivery_waiting" | "followup";
+export const INBOX_KIND_LABEL: Record<InboxKind, string> = {
+  call_open: "電話メモ未入力",
+  call_needs_human: "担当確認待ち",
+  quote_draft: "見積り未提出",
+  provisional: "正式未送付",
+  delivery_waiting: "納期回答待ち",
+  followup: "そろそろ確認",
+};
+
 export interface Customer {
   id: number;
   code: string;
@@ -41,6 +60,10 @@ export interface Customer {
   owner_user_id: number | null;
   payment_terms: string;
   notes: string;
+  pricing_mode: PricingMode;
+  markup_rate: number | null;
+  margin_pct: number | null;
+  rounding_unit: number;
 }
 
 export interface Supplier {
@@ -50,6 +73,8 @@ export interface Supplier {
   route_type: RouteType;
   lead_time_days: number;
   contact_email: string | null;
+  /** この仕入れ先の仕入れ値に掛ける標準掛率（得意先にルールが無いときに使う）。 */
+  markup_rate: number | null;
 }
 
 export interface Product {
@@ -94,6 +119,15 @@ export interface Quote {
   lost_detail: string | null;
   submitted_at: string | null;
   closed_at: string | null;
+  /** 暫定回答（電話・SMS 等で単価を先に伝えた）日時。formal_sent_at が空なら「正式未送付」。 */
+  provisional_at: string | null;
+  provisional_channel: ProvisionalChannel | null;
+  provisional_text: string | null;
+  /** 暫定回答時点の明細スナップショット（正式見積書との差異チェック用）。 */
+  provisional_items_json: string | null;
+  formal_sent_at: string | null;
+  /** 回答納期が概算（注文前）か確定（注文後）か。 */
+  delivery_kind: DeliveryKind;
   created_at: string;
   updated_at: string;
 }
@@ -293,8 +327,23 @@ export interface User {
   department: string;
   email: string | null;
   status: "active" | "inactive";
+  /** 月の売上目標（税抜）・粗利目標。null なら未設定。 */
+  target_sales: number | null;
+  target_margin: number | null;
+  /** 得意先への代理送付（アプリから直接メール）を許可するか。既定は不可。 */
+  proxy_send_allowed: number;
   created_at: string;
 }
+
+/** 回答納期の種類：注文前の概算か、注文後の確定か。 */
+export type DeliveryKind = "estimate" | "confirmed";
+export const DELIVERY_KIND_LABEL: Record<DeliveryKind, string> = { estimate: "概算（注文前）", confirmed: "確定（注文後）" };
+
+export type CrossSellDismissReason = "proposed" | "not_needed";
+export const CROSSSELL_DISMISS_LABEL: Record<CrossSellDismissReason, string> = { proposed: "提案済み", not_needed: "不要" };
+export interface CrossSellDismissal { id: number; customer_id: number; product_id: number; reason: CrossSellDismissReason; note: string; created_at: string }
+
+export interface MailLog { id: number; quote_id: number | null; user_id: number | null; kind: "self" | "customer"; to_addr: string; cc_addr: string | null; subject: string; created_at: string }
 export interface CustomerOwnerRecord {
   id: number;
   customer_id: number;

@@ -57,6 +57,22 @@ function migrate(db: DatabaseSync): void {
   add("quotes", "deal_id", "INTEGER REFERENCES deals(id)");
   add("calls", "contact_id", "INTEGER REFERENCES contacts(id)");
   add("calls", "deal_id", "INTEGER REFERENCES deals(id)");
+  // 値付けルール（掛率／粗利／端数）と暫定回答（正式未送付）— スマホ外出先モード
+  add("customers", "pricing_mode", "TEXT NOT NULL DEFAULT 'none'");
+  add("customers", "markup_rate", "REAL");
+  add("customers", "margin_pct", "REAL");
+  add("customers", "rounding_unit", "INTEGER NOT NULL DEFAULT 1");
+  add("suppliers", "markup_rate", "REAL");
+  add("quotes", "provisional_at", "TEXT");
+  add("quotes", "provisional_channel", "TEXT");
+  add("quotes", "provisional_text", "TEXT");
+  add("quotes", "provisional_items_json", "TEXT");
+  add("quotes", "formal_sent_at", "TEXT");
+  // 目標・代理送付・概算／確定納期
+  add("users", "target_sales", "REAL");
+  add("users", "target_margin", "REAL");
+  add("users", "proxy_send_allowed", "INTEGER NOT NULL DEFAULT 0");
+  add("quotes", "delivery_kind", "TEXT NOT NULL DEFAULT 'estimate'");
 }
 
 export function dbExists(path: string = defaultDbPath()): boolean {

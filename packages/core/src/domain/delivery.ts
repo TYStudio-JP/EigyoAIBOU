@@ -1,6 +1,14 @@
 import type { Db } from "../db/connection";
 import type { QuoteWithItems } from "./types";
-import { addActivity, addDays, getQuote, listQuotes, today, updateQuoteHeader } from "./repo";
+import { addActivity, addDays, getQuote, listQuotes, setDeliveryKind, today, updateQuoteHeader } from "./repo";
+import { DELIVERY_KIND_LABEL, type DeliveryKind } from "./types";
+
+/** 回答納期を「概算（注文前）」「確定（注文後）」に切り替える。 */
+export function markDeliveryKind(db: Db, quoteId: number, kind: DeliveryKind, note?: string): QuoteWithItems {
+  setDeliveryKind(db, quoteId, kind);
+  addActivity(db, quoteId, "note", `回答納期を${DELIVERY_KIND_LABEL[kind]}に${note ? `：${note}` : ""}`);
+  return getQuote(db, quoteId)!;
+}
 
 /** 納期回答待ち：決着していない見積りのうち、仕入れ先の納期回答が無い明細があるもの。 */
 export interface DeliveryWaiting { quote: QuoteWithItems; waiting_items: QuoteWithItems["items"]; overdue: boolean }
@@ -23,6 +31,8 @@ export function recordSupplierDelivery(db: Db, quoteId: number, itemId: number, 
   if (dated.length && q.items.filter((x) => x.product_id).every((x) => x.supplier_delivery)) {
     const promised = addDays(dated.sort().pop()!, 1);
     updateQuoteHeader(db, quoteId, { promised_delivery: promised });
+    // 受注後に全明細の回答が揃ったら「確定納期」。注文前は概算のまま（人が切り替えられる）
+    if (q.status === "won" && q.delivery_kind !== "confirmed") markDeliveryKind(db, quoteId, "confirmed", "受注後に仕入れ先の回答が全明細そろったため");
   }
   return getQuote(db, quoteId)!;
 }

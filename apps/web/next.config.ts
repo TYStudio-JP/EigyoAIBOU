@@ -8,7 +8,7 @@ if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@eigyo/core"],
-  serverExternalPackages: ["exceljs", "@anthropic-ai/sdk"],
+  serverExternalPackages: ["exceljs", "@anthropic-ai/sdk", "nodemailer"],
   turbopack: {
     rules: {
       "*.css": {

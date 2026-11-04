@@ -14,9 +14,10 @@ import {
   getQuote, getQuoteByNo, getSettings, hasApiKey, listActivities, listCustomers, listQuotes, lostReasonStats, openDb, priceHistory,
   proposePrice, ROUTE_LABEL, seedDatabase, setQuoteStatus, STATUS_LABEL, today, extractQuoteRequest, extractQuoteRequestFallback,
   createCall, executeCallRequests, findCustomerByTel, listCalls, structureCallMemo, composeCallConfirmation, updateCall, CALL_REQUEST_LABEL,
-  adjudicateDealLink, attachCallToDeal, attachQuoteToDeal, dealTimeline, getDeal, handoverCustomer, handoverFacts, listContacts, listDeals, listUsers, refreshDealSummary, DEAL_STATUS_LABEL, CONTACT_STATUS_LABEL,
+  adjudicateDealLink, applyDealStatus, attachCallToDeal, attachQuoteToDeal, dealTimeline, getDeal, handoverCustomer, handoverFacts, listContacts, listDeals, listUsers, refreshDealSummary, DEAL_STATUS_LABEL, CONTACT_STATUS_LABEL,
   buildKeijo, deliveryWaitingList, recordSupplierDelivery, deliveryNotice, priceImpact, reportFacts, reportDraft, visitBrief, listSuppliers, researchWeb,
-  findRepoRoot, type LostReason, type NewQuoteItem, type QuoteStatus,
+  findRepoRoot, replyQueue, markProvisional, markFormalSent, formalDiff, provisionalText, pendingFormalList, PROVISIONAL_CHANNEL_LABEL, type ProvisionalChannel,
+  type LostReason, type NewQuoteItem, type QuoteStatus,
 } from "@eigyo/core";
 
 // リポジトリ直下の .env（ANTHROPIC_API_KEY など）を読む。既に設定済みの環境変数は上書きしない。
@@ -164,6 +165,38 @@ server.registerTool("followup_queue", {
   description: "提出済・追跡中の見積りから、フォローすべき案件を緊急度順に返す（「あの見積り、どうなった？」）。",
   inputSchema: {},
 }, async () => text(followupQueue(db).map((f) => ({ urgency: f.urgency, quote_no: f.quote.quote_no, customer: f.quote.customer_name, subject: f.quote.subject, total: f.quote.total, days_since_submit: f.days_since_submit, days_since_last_touch: f.days_since_last_touch, suggestion: f.suggestion }))));
+
+server.registerTool("reply_queue", {
+  title: "返事待ち",
+  description: "得意先から来てまだ返していないもの・自分が約束してまだ果たしていないもの（電話メモ未入力・担当確認待ち・正式未送付・見積り未提出・納期回答待ち・そろそろ確認）を急ぎ順に返す。外出先のホームと同じ。",
+  inputSchema: { limit: z.number().int().min(1).max(100).optional().describe("件数（既定 20）") },
+}, async ({ limit }) => text(replyQueue(db, { limit: limit ?? 20 }).map((i) => ({ kind: i.kind, label: i.label, customer: i.customer, title: i.title, todo: i.todo, days: i.days, amount: i.amount, url: `http://localhost:3000${i.url}` }))));
+
+server.registerTool("mark_provisional", {
+  title: "暫定回答を記録",
+  description: "電話・SMS・LINE・メール本文で単価を先に伝えたことを記録する。下書きは提出済になり、正式見積書は「未送付」として追跡される。文面（SMS 用の短文）も返す。",
+  inputSchema: { quote_no: z.string().describe("見積番号"), channel: z.enum(["phone", "sms", "line", "mail"]).describe("伝えた手段") },
+}, async ({ quote_no, channel }) => {
+  const q = getQuoteByNo(db, quote_no);
+  if (!q) throw new Error(`見積り ${quote_no} が見つかりません`);
+  const body = provisionalText(q, getSettings(db), channel as ProvisionalChannel);
+  const after = markProvisional(db, q.id, { channel: channel as ProvisionalChannel, text: body });
+  if (after.deal_id) { applyDealStatus(db, after.deal_id); await refreshDealSummary(db, after.deal_id, { useAi: false }); }
+  return text({ quote_no, status: after.status, provisional_at: after.provisional_at, channel: PROVISIONAL_CHANNEL_LABEL[channel as ProvisionalChannel], text: body, note: "正式見積書は未送付として返事待ちに残ります。送ったら mark_formal_sent を呼んでください。" });
+});
+
+server.registerTool("mark_formal_sent", {
+  title: "正式見積書を送付済みにする",
+  description: "暫定回答した見積りの正式見積書を送ったことを記録する。先に口頭で伝えた単価・数量と今の明細の差があれば返す（送る前の確認用に check_only=true）。",
+  inputSchema: { quote_no: z.string(), check_only: z.boolean().optional().describe("true なら記録せず差異だけ返す") },
+}, async ({ quote_no, check_only }) => {
+  const q = getQuoteByNo(db, quote_no);
+  if (!q) throw new Error(`見積り ${quote_no} が見つかりません`);
+  const diff = formalDiff(q);
+  if (check_only) return text({ quote_no, pending: Boolean(q.provisional_at && !q.formal_sent_at), diff, still_pending: pendingFormalList(db).length });
+  const after = markFormalSent(db, q.id);
+  return text({ quote_no, formal_sent_at: after.formal_sent_at, diff_at_send: diff });
+});
 
 server.registerTool("record_followup", {
   title: "フォローを記録",
