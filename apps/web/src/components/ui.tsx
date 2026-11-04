@@ -4,7 +4,7 @@ import { STATUS_LABEL } from "@eigyo/core/shared";
 
 export function Card({ title, action, children, className = "" }: { title?: React.ReactNode; action?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
-    <section className={`bg-surface border border-line rounded-lg ${className}`}>
+    <section className={`bg-surface border border-line rounded-lg min-w-0 overflow-hidden ${className}`}>
       {(title || action) && (
         <header className="flex items-center justify-between px-4 py-3 border-b border-line">
           <h2 className="font-semibold text-sm">{title}</h2>

@@ -66,7 +66,7 @@ export function VisitsPanel({ visits, customers, icsUrl, google, flash }: { visi
         </div>
       </Card>
 
-      <Card title={`これからの訪問（${visits.length}）`}>
+      <Card title={`これからの訪問 ${visits.length}`}>
         {visits.length === 0 ? <Empty>予定なし</Empty> : (
           <div className="space-y-3">
             {[...byDay.entries()].map(([day, list]) => (
@@ -99,7 +99,7 @@ export function VisitsPanel({ visits, customers, icsUrl, google, flash }: { visi
           )}
         </Card>
       )}
-      <Card title="カレンダー取り込み（iCal URL）">
+      <Card title="カレンダー取り込み">
         <div className="flex flex-wrap gap-2 items-center">
           <input className={`${inputCls} flex-1 min-w-[16rem]`} placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" value={url} onChange={(e) => setUrl(e.target.value)} />
           <Button variant="primary" busy={busy === "url"} onClick={() => sync("url")}>{url.trim() ? "取り込む" : "解除"}</Button>

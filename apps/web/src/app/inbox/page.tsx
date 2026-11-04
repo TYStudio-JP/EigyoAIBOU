@@ -15,7 +15,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const items = replyQueue(d, { userId: all === "1" ? null : me?.id ?? null, limit: 100 });
   return (
     <>
-      <PageTitle title={`返事待ち（${items.length}）`} sub={me && all !== "1" ? `${me.name} の担当分` : "全員分"} action={<Link href={all === "1" ? "/inbox" : "/inbox?all=1"} className="text-xs text-brand hover:underline">{all === "1" ? "自分の担当分だけ" : "全員分を見る"}</Link>} />
+      <PageTitle title={`返事待ち ${items.length}`} sub={me && all !== "1" ? `${me.name} の担当分` : "全員分"} action={<Link href={all === "1" ? "/inbox" : "/inbox?all=1"} className="text-xs text-brand hover:underline">{all === "1" ? "自分の担当分だけ" : "全員分を見る"}</Link>} />
       <Card><InboxList items={items} /></Card>
     </>
   );

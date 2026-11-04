@@ -39,48 +39,48 @@ export default async function Dashboard() {
         <div className="mb-4 rounded-md border border-line bg-surface px-4 py-2 text-xs text-muted flex items-center justify-between"><span>AI 機能は未接続です</span><Link href="/settings" className="text-brand hover:underline">設定で接続</Link></div>
       )}
       <HomeSwitch initialMode={home.mode} serverNow={now.getTime()} visits={todayVisits} switchMinutes={home.switch_minutes} inboxCount={inbox.length} brief={briefNode}
-        inbox={<Card title={`返事待ち（${inbox.length}${inbox.length >= 8 ? "+" : ""}）`} action={<Link href="/inbox" className="text-xs text-brand hover:underline">すべて見る →</Link>}><InboxList items={inbox} compact /></Card>} />
+        inbox={<Card title={`返事待ち ${inbox.length}${inbox.length >= 8 ? "+" : ""}`} action={<Link href="/inbox" className="text-xs text-brand hover:underline">すべて見る →</Link>}><InboxList items={inbox} compact /></Card>} />
       <div className="lg:hidden grid grid-cols-3 gap-2 mb-4 text-center text-xs">
         {[["/chat", "💬", "質問"], ["/quotes/new", "✎", "見積り"], ["/inquiries/new", "❓", "問い合わせ"], ["/products/photo", "📷", "写真で調べる"], ["/delivery", "⏱", "納期"], ["/report", "✉", "日報"]].map(([h, i, l]) => <Link key={h} href={h} className="rounded-lg bg-surface border border-line py-2.5"><div className="text-xl">{i}</div>{l}</Link>)}
       </div>
       <div className="mb-4"><TargetCard p={target} /></div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <Stat label="要フォロー（提出済・追跡中）" value={stats.by_status.submitted + stats.by_status.tracking} sub={`提出済 ${stats.by_status.submitted} / 追跡中 ${stats.by_status.tracking}`} tone="warn" />
+        <Stat label="要フォロー" value={stats.by_status.submitted + stats.by_status.tracking} sub={`提出済 ${stats.by_status.submitted} / 追跡中 ${stats.by_status.tracking}`} tone="warn" />
         <Stat label="未決着の見積り金額" value={yen(stats.open_amount)} sub="税抜合計" />
         <Stat label="直近30日の受注額" value={yen(stats.recent_won_amount)} tone="ok" />
-        <Stat label="受注率（累計）" value={pct(stats.win_rate_pct, 0)} sub={`受注 ${stats.by_status.won} / 失注 ${stats.by_status.lost}`} />
+        <Stat label="受注率" value={pct(stats.win_rate_pct, 0)} sub={`受注 ${stats.by_status.won} / 失注 ${stats.by_status.lost}`} />
       </div>
-      <div className="grid lg:grid-cols-5 gap-4">
-        <Card className="lg:col-span-5" title="今日動かす案件（次の一手の期限順）" action={<Link href="/deals" className="text-xs text-brand hover:underline">案件一覧へ →</Link>}>
-          {deals.length === 0 ? <Empty>動かす案件はありません</Empty> : (
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 min-w-0">
+        <Card className="lg:col-span-5" title="今日の案件" action={<Link href="/deals" className="text-xs text-brand hover:underline">案件一覧へ →</Link>}>
+          {deals.length === 0 ? <Empty>なし</Empty> : (
             <ul className="divide-y divide-line">
               {deals.map((x) => {
                 const overdue = x.next_action_due && x.next_action_due < t;
                 return (
-                  <li key={x.id} className="py-2.5 flex items-center gap-3">
-                    <DealStatusBadge status={x.status} />
+                  <li key={x.id} className="py-2.5 flex items-center gap-3 min-w-0">
+                    <span className="shrink-0"><DealStatusBadge status={x.status} /></span>
                     <div className="flex-1 min-w-0">
-                      <Link href={`/deals/${x.id}`} className="font-medium hover:underline">{x.customer.short_name}　<span className="text-muted font-normal">{x.title}</span></Link>
-                      <div className={`text-xs truncate ${overdue ? "text-danger" : "text-muted"}`}>→ {x.next_action || "次の一手を決める"}{x.next_action_due ? `（${dateJp(x.next_action_due)}${overdue ? " 期限切れ" : ""}）` : ""}</div>
+                      <Link href={`/deals/${x.id}`} className="font-medium hover:underline block truncate">{x.customer.short_name}　<span className="text-muted font-normal">{x.title}</span></Link>
+                      <div className={`text-xs truncate ${overdue ? "text-danger" : "text-muted"}`}>→ {x.next_action || "次の一手を決める"}{x.next_action_due ? `　${dateJp(x.next_action_due)}${overdue ? " 期限切れ" : ""}` : ""}</div>
                     </div>
-                    <div className="text-right text-sm num">{yen(x.amount)}</div>
+                    <div className="text-right text-sm num shrink-0">{yen(x.amount)}</div>
                   </li>
                 );
               })}
             </ul>
           )}
         </Card>
-        <Card className="lg:col-span-5" title="電話の宿題（メモ未入力・担当確認待ち）" action={<Link href="/calls" className="text-xs text-brand hover:underline">電話メモへ →</Link>}>
-          {calls.length === 0 ? <Empty>電話の宿題はありません</Empty> : (
+        <Card className="lg:col-span-5" title="電話の宿題" action={<Link href="/calls" className="text-xs text-brand hover:underline">電話メモへ →</Link>}>
+          {calls.length === 0 ? <Empty>なし</Empty> : (
             <ul className="divide-y divide-line">
               {calls.slice(0, 5).map((c) => {
                 const needs = c.minutes?.requests.filter((r) => r.result?.status === "needs_human") ?? [];
                 return (
-                  <li key={c.id} className="py-2.5 flex items-center gap-3">
+                  <li key={c.id} className="py-2.5 flex items-center gap-3 min-w-0">
                     <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[11px] font-semibold ${c.status === "open" ? "bg-amber-50 text-amber-800 border-amber-200" : "bg-blue-50 text-blue-700 border-blue-200"}`}>{c.status === "open" ? "メモ未入力" : `確認 ${needs.length}`}</span>
                     <div className="flex-1 min-w-0">
                       <Link href={`/calls/${c.id}`} className="font-medium hover:underline">{c.customer?.short_name ?? (c.tel ? `未登録 ${c.tel}` : "得意先未設定")}</Link>
-                      <div className="text-xs text-muted truncate">{c.status === "open" ? `${c.started_at.slice(5, 16)} の通話。要点を話して記録してください` : needs.map((r) => r.result!.headline).join(" / ")}</div>
+                      <div className="text-xs text-muted truncate">{c.status === "open" ? `${c.started_at.slice(5, 16)} の通話` : needs.map((r) => r.result!.headline).join(" / ")}</div>
                     </div>
                   </li>
                 );
@@ -88,24 +88,24 @@ export default async function Dashboard() {
             </ul>
           )}
         </Card>
-        <Card className="lg:col-span-3" title="そろそろ「あの見積り、どうなった？」" action={<Link href="/tracking" className="text-xs text-brand hover:underline">追跡ボードへ →</Link>}>
-          {queue.length === 0 ? <Empty>フォローが必要な案件はありません</Empty> : (
+        <Card className="lg:col-span-3" title="見積もりどうなった？" action={<Link href="/tracking" className="text-xs text-brand hover:underline">追跡ボードへ →</Link>}>
+          {queue.length === 0 ? <Empty>なし</Empty> : (
             <ul className="divide-y divide-line">
               {queue.map((f) => (
-                <li key={f.quote.id} className="py-2.5 flex items-center gap-3">
-                  <UrgencyPill urgency={f.urgency} />
+                <li key={f.quote.id} className="py-2.5 flex items-center gap-3 min-w-0">
+                  <span className="shrink-0"><UrgencyPill urgency={f.urgency} /></span>
                   <div className="flex-1 min-w-0">
-                    <Link href={`/quotes/${f.quote.id}`} className="font-medium hover:underline">{f.quote.customer_name}　<span className="text-muted font-normal">{f.quote.subject}</span></Link>
+                    <Link href={`/quotes/${f.quote.id}`} className="font-medium hover:underline block truncate">{f.quote.customer_name}　<span className="text-muted font-normal">{f.quote.subject}</span></Link>
                     <div className="text-xs text-muted truncate">{f.suggestion}</div>
                   </div>
-                  <div className="text-right text-sm num">{yen(f.quote.total)}<div className="text-xs text-muted">提出 {f.days_since_submit}日前</div></div>
+                  <div className="text-right text-sm num shrink-0">{yen(f.quote.total)}<div className="text-xs text-muted">提出 {f.days_since_submit}日前</div></div>
                 </li>
               ))}
             </ul>
           )}
         </Card>
-        <Card className="lg:col-span-2" title="失注理由の傾向（次の提案に活かす）">
-          {lost.length === 0 ? <Empty>失注データなし</Empty> : (
+        <Card className="lg:col-span-2" title="失注理由の傾向">
+          {lost.length === 0 ? <Empty>なし</Empty> : (
             <ul className="space-y-2">
               {lost.map((r) => {
                 const max = lost[0].count;
