@@ -40,7 +40,7 @@ export function BriefCompact({ brief, aiEnabled, headline }: { brief: VisitBrief
 
       {brief.open_deals.length > 0 && (
         <section className="rounded-lg border border-line bg-surface p-3">
-          <div className="font-semibold mb-1">進行中の案件（{brief.open_deals.length}）</div>
+          <div className="font-semibold mb-1">進行中の案件 {brief.open_deals.length}</div>
           <ul className="divide-y divide-line">{brief.open_deals.slice(0, 4).map((d) => <li key={d.id} className="py-1.5"><Link href={`/deals/${d.id}`} className="font-medium">{d.title}</Link> <span className="text-xs text-muted num">{d.status}・{yen(d.amount)}</span><div className={`text-xs ${d.overdue ? "text-danger" : "text-muted"}`}>→ {d.next_action || "次の一手未設定"}{d.due ? `（${d.due}）` : ""}</div></li>)}</ul>
         </section>
       )}

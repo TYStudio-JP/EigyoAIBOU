@@ -54,8 +54,8 @@ export function HomeSwitch({ initialMode, serverNow, visits, switchMinutes, inbo
       {/* 切替 */}
       <div className="flex items-center gap-2">
         <div className="grid grid-cols-2 rounded-lg border border-line bg-surface p-0.5 text-sm flex-1">
-          <button type="button" onClick={() => setManual("inbox")} className={`rounded-md py-1.5 ${mode === "inbox" ? "bg-brand text-brand-ink font-semibold" : "text-muted"}`}>返事待ち{inboxCount ? `（${inboxCount}）` : ""}</button>
-          <button type="button" onClick={() => setManual("brief")} disabled={!brief} className={`rounded-md py-1.5 ${mode === "brief" ? "bg-brand text-brand-ink font-semibold" : "text-muted"} disabled:opacity-40`}>次の訪問{next ? (next.inProgress ? "（訪問中）" : next.minutes <= 120 ? `（あと ${next.minutes} 分）` : `（${next.v.starts_at.slice(11, 16)}）`) : ""}</button>
+          <button type="button" onClick={() => setManual("inbox")} className={`rounded-md py-1.5 ${mode === "inbox" ? "bg-brand text-brand-ink font-semibold" : "text-muted"}`}>返事待ち{inboxCount ? ` ${inboxCount}` : ""}</button>
+          <button type="button" onClick={() => setManual("brief")} disabled={!brief} className={`rounded-md py-1.5 ${mode === "brief" ? "bg-brand text-brand-ink font-semibold" : "text-muted"} disabled:opacity-40`}>次の訪問{next ? (next.inProgress ? " 訪問中" : next.minutes <= 120 ? ` あと${next.minutes}分` : ` ${next.v.starts_at.slice(11, 16)}`) : ""}</button>
         </div>
         {manual && manual !== auto && <button type="button" className="text-[11px] text-brand" onClick={() => setManual(null)}>自動</button>}
       </div>

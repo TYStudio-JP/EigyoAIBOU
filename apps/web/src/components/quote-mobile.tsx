@@ -106,7 +106,7 @@ export function QuoteMobile({ quote, lines, aiEnabled, deal, diff }: { quote: Qu
 
       {/* 明細カード：必ず見せる。タップで根拠と修正 */}
       <section className="space-y-2">
-        <div className="flex items-center justify-between px-1"><h2 className="text-sm font-semibold">明細（{quote.items.length}）</h2>{dirty && <Button size="sm" variant="primary" busy={busy === "items"} onClick={saveEdits}>修正を保存</Button>}</div>
+        <div className="flex items-center justify-between px-1"><h2 className="text-sm font-semibold">明細 {quote.items.length}</h2>{dirty && <Button size="sm" variant="primary" busy={busy === "items"} onClick={saveEdits}>修正を保存</Button>}</div>
         {quote.items.map((it, i) => <ItemCard key={it.id} item={it} line={lines[i]} isOpen={open === i} onToggle={() => setOpen(open === i ? null : i)} edit={edit[i]} onEdit={(v) => setEdit({ ...edit, [i]: v })} onReset={() => { const n = { ...edit }; delete n[i]; setEdit(n); }} />)}
         <div className="text-right text-xs text-muted num px-1">小計 {yen(quote.total)}　消費税 {yen(tax)}　<b className="text-ink text-sm">合計 {yen(quote.total + tax)}</b></div>
         {quote.notes && <div className="text-xs text-muted px-1">備考: {quote.notes}</div>}
@@ -183,7 +183,7 @@ function ItemCard({ item: it, line, isOpen, onToggle, edit, onEdit, onReset }: {
               {line?.checks.map((c) => <p key={c.code}><b>{c.title}</b>：{c.detail}</p>)}
               <div className="flex flex-wrap gap-x-3 num text-muted">
                 <span>値引き下限 <b className="text-warn">{yen(p.floor_price)}</b></span>
-                <span>最安仕入れ {yen(p.best_cost)}（{p.best_supplier_name ?? "-"}）</span>
+                <span>最安仕入れ {yen(p.best_cost)} {p.best_supplier_name ?? ""}</span>
                 {p.other_customers && <span>他社向け {yen(p.other_customers.min)}〜{yen(p.other_customers.max)}</span>}
               </div>
             </div>
@@ -234,7 +234,7 @@ function SupplierQuoteForm({ quoteId, item, ruleLabel }: { quoteId: number; item
       router.refresh();
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(null); }
   };
-  if (!open) return <button type="button" className="text-brand font-semibold" onClick={() => setOpen(true)}>📩 メーカー回答を入れる{item.supplier_quote_at ? `（前回 ${dateJp(item.supplier_quote_at)}）` : ""}</button>;
+  if (!open) return <button type="button" className="text-brand font-semibold" onClick={() => setOpen(true)}>📩 メーカー回答を入れる{item.supplier_quote_at ? `　前回 ${dateJp(item.supplier_quote_at)}` : ""}</button>;
   return (
     <div className="rounded-md border border-line bg-bg p-2 space-y-2">
       <div className="font-semibold">メーカー回答を入れる</div>

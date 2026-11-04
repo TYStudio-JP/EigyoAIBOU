@@ -19,7 +19,7 @@ export function TargetCard({ p }: { p: TargetProgress }) {
   }
   const firstReach = p.candidates.findIndex((c) => c.reaches_sales);
   return (
-    <Card title={`${month}の目標（残り ${p.days_left} 日）`} action={<Link href="/settings#users" className="text-xs text-brand hover:underline">変更</Link>}>
+    <Card title={`${month}の目標　残り ${p.days_left} 日`} action={<Link href="/settings#users" className="text-xs text-brand hover:underline">変更</Link>}>
       <div className="grid sm:grid-cols-2 gap-4 text-sm">
         {p.target_sales != null && (
           <div>
