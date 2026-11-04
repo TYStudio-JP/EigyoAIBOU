@@ -1,4 +1,4 @@
-// 外出先モードの MCP ツール（reply_queue / mark_provisional / mark_formal_sent）のスモークテスト。npm run mcp:smoke:mobile
+// 外出先モードの MCP ツール（reply_queue / mark_provisional / mark_formal_sent / log_inquiry / list_inquiries / answer_inquiry）のスモークテスト。npm run mcp:smoke:mobile
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 const cwd = process.cwd();
@@ -6,7 +6,8 @@ const t = new StdioClientTransport({ command: "node", args: ["--import", "tsx", 
 const c = new Client({ name: "t", version: "0" });
 await c.connect(t);
 const names = (await c.listTools()).tools.map((x) => x.name);
-console.log("tools:", names.length, names.filter((n) => ["reply_queue", "mark_provisional", "mark_formal_sent"].includes(n)).join(", "));
+const expect = ["reply_queue", "mark_provisional", "mark_formal_sent", "log_inquiry", "list_inquiries", "answer_inquiry"];
+console.log("tools:", names.length, "missing:", expect.filter((n) => !names.includes(n)).join(",") || "none");
 const q = await c.callTool({ name: "create_quote", arguments: { customer: "C006", subject: "MCP暫定テスト", items: [{ product: "HG-12", qty: 20 }] } });
 const quoteNo = JSON.parse(q.content[0].text).quote_no;
 console.log("created:", quoteNo);
@@ -18,4 +19,10 @@ const f = await c.callTool({ name: "mark_formal_sent", arguments: { quote_no: qu
 console.log("formal check:", f.content[0].text.slice(0, 120).replace(/\n/g, " "));
 const f2 = await c.callTool({ name: "mark_formal_sent", arguments: { quote_no: quoteNo } });
 console.log("formal sent:", JSON.parse(f2.content[0].text).formal_sent_at);
+const li = await c.callTool({ name: "log_inquiry", arguments: { question: "みどり食品の高橋です。HK-5L を 30 双、納期はいつ頃になりますか？", channel: "mail" } });
+const lij = JSON.parse(li.content[0].text); console.log("log_inquiry:", lij.customer, lij.kind, "products:", lij.products.map((x) => x.part_number).join(","), "| draft head:", lij.draft_answer.split("\n")[0]);
+const ls = await c.callTool({ name: "list_inquiries", arguments: {} });
+console.log("list_inquiries(open):", JSON.parse(ls.content[0].text).length);
+const an = await c.callTool({ name: "answer_inquiry", arguments: { id: lij.id, answer: lij.draft_answer, channel: "line" } });
+console.log("answer_inquiry:", JSON.parse(an.content[0].text).status);
 await c.close();

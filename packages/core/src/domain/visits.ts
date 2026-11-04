@@ -85,6 +85,18 @@ export function syncIcsText(db: Db, userId: number, text: string, now: Date = ne
   return { fetched: events.length, created, updated, removed, matched, from: fromS, to: toS };
 }
 
+/** 社内・ループバック・メタデータなど、外部カレンダーとしてあり得ないホスト（SSRF 対策）。 */
+export function isPrivateHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal") || h === "::1" || h === "0.0.0.0") return true;
+  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (m) {
+    const [a, b] = [Number(m[1]), Number(m[2])];
+    return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127);
+  }
+  return /^(fc|fd|fe80)/.test(h); // IPv6 ULA / link-local
+}
+
 /** iCal URL を取得して取り込む（https のみ。ユーザー自身のカレンダー URL）。 */
 export async function syncIcsFromUrl(db: Db, userId: number, url?: string | null): Promise<IcsSyncResult> {
   const u = url ?? getUser(db, userId)?.calendar_ics_url;
@@ -92,7 +104,7 @@ export async function syncIcsFromUrl(db: Db, userId: number, url?: string | null
   let parsed: URL;
   try { parsed = new URL(u.replace(/^webcal:/i, "https:")); } catch { throw new Error("iCal URL の形式が不正です"); }
   if (parsed.protocol !== "https:") throw new Error("iCal URL は https で指定してください");
-  if (/^(localhost|127\.|10\.|192\.168\.|169\.254\.|\[::1\])/.test(parsed.hostname)) throw new Error("社内アドレスは取り込み元に指定できません");
+  if (isPrivateHost(parsed.hostname)) throw new Error("社内アドレスは取り込み元に指定できません");
   const res = await fetch(parsed, { headers: { Accept: "text/calendar" }, redirect: "follow", signal: AbortSignal.timeout(20_000) });
   if (!res.ok) throw new Error(`カレンダーを取得できませんでした（HTTP ${res.status}）`);
   const text = await res.text();

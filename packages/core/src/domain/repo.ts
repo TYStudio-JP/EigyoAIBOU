@@ -756,7 +756,7 @@ export function getShareItem(db: Db, token: string): ShareItem | null {
   return one<ShareItem>(db, "SELECT id, token, title, text, url, file_name, file_mime, created_at FROM share_inbox WHERE token=? AND created_at >= datetime('now','localtime','-1 hour')", token);
 }
 export function getShareFile(db: Db, token: string): { name: string; mime: string; blob: Buffer } | null {
-  const r = db.prepare("SELECT file_name, file_mime, file_blob FROM share_inbox WHERE token=? AND file_blob IS NOT NULL").get(token) as { file_name: string; file_mime: string; file_blob: Uint8Array } | undefined;
+  const r = db.prepare("SELECT file_name, file_mime, file_blob FROM share_inbox WHERE token=? AND file_blob IS NOT NULL AND created_at >= datetime('now','localtime','-1 hour')").get(token) as { file_name: string; file_mime: string; file_blob: Uint8Array } | undefined;
   return r ? { name: r.file_name, mime: r.file_mime, blob: Buffer.from(r.file_blob) } : null;
 }
 export function deleteShareItem(db: Db, token: string): void { db.prepare("DELETE FROM share_inbox WHERE token=?").run(token); }
