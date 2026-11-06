@@ -1,4 +1,4 @@
-import { commitImport, IMPORT_FIELDS, IMPORT_KIND_LABEL, loadImportMap, previewImport, type ImportKind } from "@eigyo/core";
+import { attachQuoteToDeal, commitImport, IMPORT_FIELDS, IMPORT_KIND_LABEL, loadImportMap, previewImport, refreshDealSummary, type ImportKind } from "@eigyo/core";
 import { db } from "@/lib/db";
 import { fail, ok } from "../_util";
 
@@ -33,7 +33,12 @@ export async function POST(req: Request) {
     if (mode === "commit") {
       let mapping: Record<string, string> = {};
       try { mapping = JSON.parse(String(form.get("mapping") ?? "{}")) as Record<string, string>; } catch { return fail(new Error("列の対応が読めません"), 400); }
-      return ok(commitImport(d, buf, kind, mapping));
+      const res = commitImport(d, buf, kind, mapping);
+      // 売上実績は受注済み見積りになる。案件から漏れないよう、古い順に案件へまとめる（AI は使わず決定的に）
+      const dealIds = new Set<number>();
+      for (const qid of res.quote_ids ?? []) dealIds.add((await attachQuoteToDeal(d, qid)).deal.id);
+      for (const did of dealIds) await refreshDealSummary(d, did, { useAi: false });
+      return ok({ ...res, deals: dealIds.size });
     }
     return ok(previewImport(d, buf, kind));
   } catch (e) { return fail(e); }

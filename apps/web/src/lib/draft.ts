@@ -1,6 +1,6 @@
 import "server-only";
 import {
-  checkPrice, currentSupplierPrices, findCustomer, findProducts, getSettings, listCustomers, proposePrice,
+  checkPrice, currentSupplierPrices, findProducts, getSettings, listCustomers, matchCustomerCandidates, proposePrice,
   type Customer, type Db, type ExtractedRequest, type PriceCheck, type PriceProposal, type Product, type SupplierPrice,
 } from "@eigyo/core";
 
@@ -61,21 +61,9 @@ function summarize(p: PriceProposal): ProposalSummary {
   };
 }
 
-/** 得意先の名寄せ：ヒント文字列から候補を返す。 */
-export function matchCustomer(d: Db, hint: string | null | undefined): Customer[] {
-  if (!hint) return [];
-  const direct = findCustomer(d, hint);
-  if (direct.length) return direct;
-  // 「みどり食品の高橋です」のような文からトークンで探す
-  const tokens = hint.replace(/株式会社|有限会社|様|御中|の|です|より/g, " ").split(/[\s、。]+/).filter((t) => t.length >= 2);
-  const seen = new Map<number, Customer>();
-  for (const t of tokens) for (const c of findCustomer(d, t)) seen.set(c.id, c);
-  return [...seen.values()];
-}
-
 /** 抽出結果 → 商品マッチ・価格提案・チェック済みの下書き。 */
 export function buildDraft(d: Db, ex: ExtractedRequest, opts: { source_type: string; source_text: string; ai_used: boolean; customer_id?: number | null }): QuoteDraft {
-  const candidates = matchCustomer(d, ex.customer_hint ?? ex.contact_name);
+  const candidates = matchCustomerCandidates(d, ex.customer_hint, ex.contact_name);
   const customer_id = opts.customer_id ?? (candidates.length === 1 ? candidates[0].id : null);
   const items: DraftItem[] = ex.items.map((it) => {
     const found = [

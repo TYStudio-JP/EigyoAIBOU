@@ -7,7 +7,7 @@ import { Button, inputCls, labelCls } from "./ui";
 
 
 /** 電話メモ入力（新規 or 既存の通話に追記）。保存して AI 処理へ。 */
-export function CallMemo({ call, customers, contacts, aiEnabled, autostart }: { call: CallWithCustomer | null; customers: Customer[]; contacts: Contact[]; aiEnabled: boolean; autostart?: boolean }) {
+export function CallMemo({ call, customers, contacts, aiEnabled }: { call: CallWithCustomer | null; customers: Customer[]; contacts: Contact[]; aiEnabled: boolean }) {
   const router = useRouter();
   const [customerId, setCustomerId] = useState<number | "">(call?.customer_id ?? "");
   const [contactId, setContactId] = useState<number | "">(call?.contact_id ?? "");

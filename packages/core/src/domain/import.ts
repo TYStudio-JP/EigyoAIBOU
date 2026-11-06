@@ -4,7 +4,7 @@
  * 既存データは消さない：コードが一致すれば更新、無ければ追加。削除は人がする。
  */
 import type { Db } from "../db/connection";
-import { addSupplierPrice, createQuote, findProducts, getRawSetting, listCustomers, listProducts, listSuppliers, setRawSetting, today, upsertCustomer, upsertProduct, upsertSupplier, type NewQuoteItem } from "./repo";
+import { addSupplierPrice, createQuote, findProducts, getRawSetting, listCustomers, listProducts, listSuppliers, listUsers, setRawSetting, today, upsertCustomer, upsertProduct, upsertSupplier, type NewQuoteItem } from "./repo";
 import type { CustomerKind, PricingMode, RouteType } from "./types";
 
 export type ImportKind = "customers" | "suppliers" | "products" | "supplier_prices" | "sales";
@@ -21,6 +21,7 @@ export const IMPORT_FIELDS: Record<ImportKind, ImportField[]> = {
     F("short_name", "略称", ["略称", "得意先略称", "短縮名", "short_name"]),
     F("industry", "業種", ["業種", "業界", "industry"], false, "横展開の同業判定に使います"),
     F("prefecture", "都道府県", ["都道府県", "県", "地域", "prefecture"]),
+    F("owner", "自社の営業担当", ["営業担当", "営業担当者", "担当営業", "自社担当", "owner"], false, "ユーザー名と一致すれば担当に設定します"),
     F("contact_name", "担当者名", ["担当者", "担当者名", "先方担当", "contact", "contact_name"]),
     F("contact_email", "担当者メール", ["メール", "email", "e-mail", "mail", "contact_email"]),
     F("tel", "電話", ["電話", "電話番号", "tel", "phone"]),
@@ -64,7 +65,7 @@ export const IMPORT_FIELDS: Record<ImportKind, ImportField[]> = {
     F("unit_price", "売単価", ["売単価", "単価", "売価", "販売単価", "unit_price", "price"], true),
     F("date", "日付", ["日付", "売上日", "受注日", "納品日", "伝票日付", "date"], true),
     F("cost", "仕入れ単価", ["仕入単価", "仕入れ単価", "原価", "cost"]),
-    F("supplier_code", "仕入れ先コード", ["仕入先コード", "仕入れ先コード", "supplier_code"]),
+    F("supplier_code", "仕入れ先コード", ["仕入先コード", "仕入れ先コード", "仕入先cd", "仕入れ先cd", "supplier_code"]),
     F("subject", "件名", ["件名", "案件名", "subject", "title"]),
     F("quote_no", "伝票番号・見積番号", ["伝票番号", "受注番号", "見積番号", "no", "slip_no"], false, "同じ番号の行は 1 つの見積りにまとめます"),
   ],
@@ -132,7 +133,8 @@ export function previewImport(db: Db, buf: Buffer, kind: ImportKind): ImportPrev
   return { kind, headers, sample: rows.slice(1, 6), total: Math.max(0, rows.length - 1), mapping, fields: IMPORT_FIELDS[kind], missing_required: missing };
 }
 
-const num = (v: string | undefined): number | null => { if (v == null) return null; const n = Number(String(v).replace(/[,，円¥\s]/g, "")); return Number.isFinite(n) ? n : null; };
+/** 数値セル。空欄は null（Number("") は 0 になるので先に弾く。空欄で既存値を 0 に上書きしない）。 */
+const num = (v: string | undefined): number | null => { if (v == null) return null; const s = String(v).replace(/[,，円¥\s　]/g, ""); if (s === "") return null; const n = Number(s); return Number.isFinite(n) ? n : null; };
 const dateIso = (v: string | undefined): string | null => {
   if (!v) return null;
   const s = v.trim().replace(/[年月]/g, "/").replace(/日/g, "");
@@ -148,7 +150,7 @@ const routeOf = (v: string | undefined): RouteType => {
 };
 const kindOf = (v: string | undefined): CustomerKind => (/ディーラー|商社|販売店|dealer/.test((v ?? "").toLowerCase()) ? "dealer" : "end_user");
 
-export interface ImportResult { kind: ImportKind; total: number; inserted: number; updated: number; skipped: number; errors: string[] }
+export interface ImportResult { kind: ImportKind; total: number; inserted: number; updated: number; skipped: number; errors: string[]; /** 売上実績で作った受注見積りの ID（案件へのまとめ直しに使う） */ quote_ids?: number[] }
 
 /** 列の対応に従って取り込む。既存はコード一致で更新、無ければ追加。失敗行は理由付きで返す（他の行は取り込む）。 */
 export function commitImport(db: Db, buf: Buffer, kind: ImportKind, mapping: Record<string, string>): ImportResult {
@@ -167,10 +169,23 @@ export function commitImport(db: Db, buf: Buffer, kind: ImportKind, mapping: Rec
 
   if (kind === "customers") {
     const byCode = new Map(listCustomers(db).map((c) => [c.code, c]));
+    // 自社の営業担当：氏名（空白は無視）か、ひとりに決まる姓でユーザーに当てる
+    const squash = (s: string) => s.replace(/[\s　]/g, "");
+    const users = listUsers(db);
+    const ownerOf = (v: string | undefined): number | null | undefined => {
+      const k = squash(v ?? "");
+      if (!k) return undefined;
+      const full = users.find((u) => squash(u.name) === k);
+      if (full) return full.id;
+      const bySurname = users.filter((u) => u.name.split(/[\s　]+/)[0] === k);
+      return bySurname.length === 1 ? bySurname[0].id : null;
+    };
     body.forEach((r, i) => {
       const code = col(r, "code"), name = col(r, "name");
       if (!code || !name) { res.skipped++; res.errors.push(`${i + 2} 行目：得意先コードまたは社名が空`); return; }
       const prev = byCode.get(code);
+      const owner = ownerOf(col(r, "owner"));
+      if (owner === null) res.errors.push(`${i + 2} 行目：営業担当「${col(r, "owner")}」がユーザーに見つかりません（担当は変更していません）`);
       const markup = num(col(r, "markup_rate")), margin = num(col(r, "margin_pct"));
       const mode: PricingMode | undefined = markup ? "markup" : margin ? "margin" : undefined;
       const shortDefault = name.replace(/株式会社|有限会社|合同会社/g, "").trim() || name;
@@ -185,6 +200,7 @@ export function commitImport(db: Db, buf: Buffer, kind: ImportKind, mapping: Rec
         kind: mapped("kind") && col(r, "kind") ? kindOf(col(r, "kind")) : prev?.kind ?? "end_user",
         payment_terms: keep("payment_terms", col(r, "payment_terms"), prev?.payment_terms, "月末締め翌月末払い")!,
         notes: keep("notes", col(r, "notes"), prev?.notes, "")!,
+        ...(owner ? { owner_user_id: owner } : {}),
         ...(mode ? { pricing_mode: mode, markup_rate: markup, margin_pct: margin } : {}), ...(num(col(r, "rounding_unit")) ? { rounding_unit: num(col(r, "rounding_unit"))! } : {}),
       });
       prev ? res.updated++ : res.inserted++; byCode.set(code, row);
@@ -247,7 +263,8 @@ export function commitImport(db: Db, buf: Buffer, kind: ImportKind, mapping: Rec
     });
     for (const g of groups.values()) {
       const at = `${g.date} 12:00:00`;
-      createQuote(db, { customer_id: g.customer_id, subject: g.subject, status: "won", source_type: "import", source_text: `CSV 取り込み（${g.lines.length} 行）`, items: g.items, created_at: at, submitted_at: at, closed_at: at, valid_until: null, promised_delivery: null });
+      const q = createQuote(db, { customer_id: g.customer_id, subject: g.subject, status: "won", source_type: "import", source_text: `CSV 取り込み（${g.lines.length} 行）`, items: g.items, created_at: at, submitted_at: at, closed_at: at, valid_until: null, promised_delivery: null });
+      (res.quote_ids ??= []).push(q.id);
       res.inserted++;
     }
   }

@@ -72,9 +72,9 @@ export function ItemsEditor({ customerId, items, onChange, excludeQuoteId, onInq
   return (
     <div>
       <div className="overflow-x-auto -mx-3 px-3 lg:mx-0 lg:px-0">
-      <table className="w-full text-sm min-w-[56rem]">
+      <table className="w-full table-fixed text-sm min-w-[58rem]">
         <thead className="text-xs text-muted">
-          <tr><th className="text-left font-normal py-1 w-8">#</th><th className="text-left font-normal w-[26%]">商品</th><th className="text-right font-normal w-20">数量</th><th className="text-left font-normal w-12 pl-2">単位</th><th className="text-right font-normal w-28">単価</th><th className="text-left font-normal pl-3 w-[20%]">仕入れ（原価）</th><th className="text-right font-normal w-16">粗利</th><th className="text-right font-normal w-24">金額</th><th className="text-left font-normal pl-3">チェック</th><th className="w-8" /></tr>
+          <tr><th className="text-left font-normal py-1 w-8">#</th><th className="text-left font-normal">商品</th><th className="text-right font-normal w-20 min-w-20">数量</th><th className="text-left font-normal w-20 min-w-20 pl-2">単位</th><th className="text-right font-normal w-28 min-w-28">単価</th><th className="text-left font-normal pl-3 w-[16%] min-w-36">仕入れ（原価）</th><th className="text-right font-normal w-14">粗利</th><th className="text-right font-normal w-28">金額</th><th className="text-left font-normal pl-3 w-32 min-w-32">チェック</th><th className="w-8" /></tr>
         </thead>
         <tbody>
           {items.map((it, i) => {
