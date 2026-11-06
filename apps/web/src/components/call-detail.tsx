@@ -63,7 +63,7 @@ export function CallDetail({ call, customers, contacts, aiEnabled, fresh, deal, 
 
       {!processing && (editMemo || !m) && (
         <Card title={m ? "メモを修正して再処理" : "電話メモ"} action={m ? <Button size="sm" onClick={() => setEditMemo(false)}>閉じる</Button> : undefined}>
-          <CallMemo call={call} customers={customers} contacts={contacts} aiEnabled={aiEnabled} autostart={fresh} />
+          <CallMemo call={call} customers={customers} contacts={contacts} aiEnabled={aiEnabled} />
         </Card>
       )}
 
