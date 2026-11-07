@@ -12,5 +12,5 @@ export default async function CallPage({ params, searchParams }: { params: Promi
   const call = getCall(d, Number(id));
   if (!call) notFound();
   const deal = call.deal_id ? getDeal(d, call.deal_id) : null;
-  return <CallDetail call={call} customers={listCustomers(d)} contacts={listContacts(d, undefined, { includeInactive: false })} aiEnabled={hasApiKey()} fresh={fresh === "1"} deal={deal ? { id: deal.id, title: deal.title } : null} dealOptions={call.customer_id ? listDeals(d, { customerId: call.customer_id, openOnly: true, limit: 30 }).map((x) => ({ id: x.id, title: x.title })) : []} />;
+  return <CallDetail key={`${call.id}:${call.minutes ? 1 : 0}:${call.process_state ?? ""}`} call={call} customers={listCustomers(d)} contacts={listContacts(d, undefined, { includeInactive: false })} aiEnabled={hasApiKey()} fresh={fresh === "1"} deal={deal ? { id: deal.id, title: deal.title } : null} dealOptions={call.customer_id ? listDeals(d, { customerId: call.customer_id, openOnly: true, limit: 30 }).map((x) => ({ id: x.id, title: x.title })) : []} />;
 }

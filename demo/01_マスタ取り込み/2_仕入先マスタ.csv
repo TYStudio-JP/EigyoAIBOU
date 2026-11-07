@@ -1,0 +1,5 @@
+仕入先CD,仕入先名,区分,標準納期,メール,標準掛率
+S09,ミツワ精測株式会社,メーカー直,10,order@mitsuwa-seisoku.example.jp,1.3
+S10,あさひな物流機器株式会社,代理店,4,eigyo@asahina-butsuryu.example.jp,
+S11,東都まるいち産資株式会社,商社,2,hanbai@toto-maruichi.example.jp,
+S03,東和切削工具株式会社,,8,,
